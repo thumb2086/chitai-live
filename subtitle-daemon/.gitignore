@@ -1,0 +1,19 @@
+# 打包成品與模型體積很大（306MB），不進版控。
+# 其他人 clone 之後跑這行重建：
+#     pip install pyinstaller
+#     pyinstaller caption_daemon.spec --noconfirm --distpath dist --workpath build
+dist/
+build/
+__pycache__/
+*.pyc
+
+# 執行期產生的 log / 暫存音檔
+exe_out.txt
+exe_err.txt
+*.wav
+!models/**/*.wav
+
+# 模型（161MB）另外下載：
+#     https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-x-asr-160ms-streaming-zipformer-transducer-zh-en-punct-int8-2026-06-05.tar.bz2
+models/
+sherpa-onnx-*/

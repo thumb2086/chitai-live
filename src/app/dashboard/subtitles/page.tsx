@@ -10,6 +10,7 @@ import {
   SettingsTabs, SettingsTabPanel, SettingsCard, OverlayTokenProvider,
 } from "@/components/overlay-settings";
 import { createLiveCaptions, type Engine, type LiveCaptions } from "@/lib/captions-live";
+import { probeLocalDaemon, LOCAL_WS_DEFAULT, LOCAL_FAILURE_HINT, type LocalHealth } from "@/lib/captions-local";
 
 type EngineCfg = {
   engine: Engine;
@@ -18,6 +19,8 @@ type EngineCfg = {
   /** Latency profile: window length and how often a new window is sent. */
   windowMs: number;
   stepMs: number;
+  /** Daemon endpoint for the local engine. */
+  wsUrl?: string;
 };
 
 const DEFAULTS: EngineCfg = {
@@ -26,6 +29,7 @@ const DEFAULTS: EngineCfg = {
   language: "zh-TW",
   windowMs: 2400,
   stepMs: 1200,
+  wsUrl: LOCAL_WS_DEFAULT,
 };
 
 /** Named latency profiles so the trade-off is explicit rather than numeric. */
@@ -77,7 +81,14 @@ const PROVIDER_LABEL: Record<string, string> = {
   router: "Groq 路由器",
 };
 
-type Metrics = { provider: string; latencyMs: number; windowMs: number; fellBack?: boolean; failReason?: string };
+type Metrics = {
+  provider: string;
+  latencyMs: number;
+  windowMs?: number;
+  fellBack?: boolean;
+  failReason?: string;
+  firstTokenMs?: number;
+};
 
 export default function CaptionsPage() {
   return (
@@ -104,8 +115,31 @@ function CaptionsInner() {
   const [textInput, setTextInput] = useState("");
   const [router, setRouter] = useState<ProviderInfo | null>(null);
   const [previewKey, setPreviewKey] = useState(0);
+  /** Live preview of whatever the engine has produced so far this take. */
+  const [preview, setPreview] = useState("");
+  const [local, setLocal] = useState<LocalHealth | null>(null);
+  const [probing, setProbing] = useState(false);
 
   const handle = useRef<LiveCaptions | null>(null);
+
+  // The daemon runs on the viewer's machine, so only ask about it when the
+  // local engine is actually selected. Probing on mount would fire a request
+  // to localhost for everyone, including people who will never use it.
+  useEffect(() => {
+    if (ec.engine !== "local") return;
+    let cancelled = false;
+    setProbing(true);
+    probeLocalDaemon(ec.wsUrl || LOCAL_WS_DEFAULT)
+      .then((h) => {
+        if (!cancelled) setLocal(h);
+      })
+      .finally(() => {
+        if (!cancelled) setProbing(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ec.engine, ec.wsUrl]);
 
   useEffect(() => {
     Promise.all([
@@ -149,20 +183,24 @@ function CaptionsInner() {
     handle.current = null;
     setState("idle");
     setLevel(0);
+    setPreview("");
   }, []);
 
   const start = useCallback(async () => {
     setLoadError(null);
     setState("listening");
+    setPreview("");
     const h = createLiveCaptions({
       engine: ec.engine,
       language: ec.language,
       model: ec.model,
       windowMs: ec.windowMs,
       stepMs: ec.stepMs,
+      ...(ec.wsUrl ? { wsUrl: ec.wsUrl } : {}),
       onSegment: (s) => {
         void postSegment(s.text);
       },
+      onPartial: setPreview,
       onStatus: (s) => {
         setState(s.state);
         if (s.detail) setDetail(s.detail);
@@ -170,12 +208,15 @@ function CaptionsInner() {
       onLevel: (r) => setLevel(r),
       onMetrics: (m) => {
         setMetrics(m);
-        setLatency(m.latencyMs);
+        // For the local engine latencyMs is wall time since connect, which
+        // keeps climbing for the whole take. Showing it as "latency" would
+        // be a lie, so use the real first-token time instead.
+        setLatency(m.firstTokenMs ?? m.latencyMs);
       },
     });
     handle.current = h;
     await h.start();
-  }, [ec.engine, ec.language, ec.model, ec.windowMs, ec.stepMs, postSegment]);
+  }, [ec.engine, ec.language, ec.model, ec.windowMs, ec.stepMs, ec.wsUrl, postSegment]);
 
   // Latency and provider come from the server's own measurement of each window
   // (onMetrics), so there is no client-side stopwatch to drift from reality.
@@ -363,7 +404,9 @@ function CaptionsInner() {
                 <span className="captions-mic-line-label">
                   {ec.engine === "groq"
                     ? `Groq · ${ec.model.replace("whisper-", "")}`
-                    : "瀏覽器內建 STT"}
+                    : ec.engine === "local"
+                      ? "本機模型 · x-asr 160ms"
+                      : "瀏覽器內建 STT"}
                 </span>
               </div>
 
@@ -372,9 +415,23 @@ function CaptionsInner() {
                   語音辨識服務
                   <select value={ec.engine} onChange={(e) => set("engine", e.target.value as Engine)}>
                     <option value="groq">Groq 雲端轉寫（自有路由器）</option>
+                    <option value="local">
+                      本機模型（本機轉寫，有標點，音訊不出電腦）
+                    </option>
                     <option value="browser">Browser STT（免費，僅 Chrome / Edge）</option>
                   </select>
                 </label>
+                {ec.engine === "local" && (
+                  <label>
+                    本機服務位址
+                    <input
+                      type="text"
+                      value={ec.wsUrl ?? LOCAL_WS_DEFAULT}
+                      onChange={(e) => set("wsUrl", e.target.value)}
+                      spellCheck={false}
+                    />
+                  </label>
+                )}
                 {ec.engine === "groq" && (
                   <label>
                     模型
@@ -388,6 +445,22 @@ function CaptionsInner() {
                   </label>
                 )}
               </div>
+
+              {ec.engine === "local" && (
+                <p className="settings-note">
+                  {probing
+                    ? "正在確認本機服務…"
+                    : /* Chrome 142+ 會先問「允許存取本機網路」，被擋時要把
+                         該做什麼講清楚，不能只說「連不上」 */
+                      local?.ok
+                      ? `本機服務運作中 · ${local.model ?? "x-asr"} · ${
+                          local.provider ? `${local.provider.toUpperCase()} 推論 · ` : ""
+                        }已啟動 ${Math.round(local.uptime_s ?? 0)} 秒。串流輸出，自動轉繁體並加標點。`
+                      : `${LOCAL_FAILURE_HINT[local?.reason ?? "unknown"]}${
+                          local?.error ? `（${local.error}）` : ""
+                        }`}
+                </p>
+              )}
 
               {ec.engine === "groq" && (
                 <p className="settings-note">
@@ -431,12 +504,26 @@ function CaptionsInner() {
                 </p>
               )}
 
+              {/* Live preview: shows what the engine has produced so far this
+                  take, including text not yet finalised. Groq only reports
+                  whole windows, so this stays empty on that path. */}
+              {preview && (
+                <div className="settings-note" data-testid="captions-live-preview">
+                  即時預覽：{preview}
+                </div>
+              )}
+
               <div className="caption-mic-speaker-field">
                 <button
                   type="button"
                   className={state === "idle" ? "primary-button" : "danger-button"}
                   onClick={() => (state === "idle" ? start() : stop())}
-                  disabled={ec.engine === "groq" && router?.configured === false}
+                  disabled={
+                    (ec.engine === "groq" && router?.configured === false) ||
+                    // Starting with no daemon would just yield a WebSocket error
+                    // after the mic is already live, which reads as a failure.
+                    (ec.engine === "local" && local?.ok === false)
+                  }
                 >
                   {state === "idle" ? <Mic size={15} /> : <MicOff size={15} />}
                   {state === "idle" ? "開始錄音" : "停止錄音"}
@@ -499,7 +586,12 @@ function CaptionsInner() {
                 </p>
                 <div className="action-row">
                   <Badge tone="neutral">
-                    <Cpu size={13} /> {ec.engine === "groq" ? "伺服器轉寫" : "瀏覽器轉寫"}
+                    <Cpu size={13} />
+                    {ec.engine === "groq"
+                      ? "伺服器轉寫"
+                      : ec.engine === "local"
+                        ? "本機轉寫"
+                        : "瀏覽器轉寫"}
                   </Badge>
                   <Badge tone="neutral">
                     <Gauge size={13} />{" "}

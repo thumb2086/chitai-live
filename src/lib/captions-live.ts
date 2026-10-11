@@ -16,6 +16,7 @@
  */
 
 import { mergeCaption } from "./caption-merge";
+import { createLocalCaptions, type LocalCaptions } from "./captions-local";
 
 export const TARGET_RATE = 16000;
 export const WINDOW_MS = 2400;
@@ -24,7 +25,12 @@ const MAX_IN_FLIGHT = 2;
 /** Below this the window is treated as silence and no request is spent. */
 const MIN_RMS = 0.006;
 
-export type Engine = "groq" | "browser";
+/**
+ * `local` streams straight to a daemon on this machine (sherpa-onnx x-asr).
+ * It needs neither the windowing below nor Groq, so it takes a separate path
+ * in `start()` — see `captions-local.ts`.
+ */
+export type Engine = "groq" | "browser" | "local";
 export type LiveSegment = { startMs: number; endMs: number; text: string };
 export type LiveState = "idle" | "listening" | "transcribing" | "error";
 
@@ -42,11 +48,21 @@ export type LiveCaptionsOptions = {
   onSegment: (seg: LiveSegment) => void;
   onStatus?: (s: { state: LiveState; detail?: string }) => void;
   onLevel?: (rms: number) => void;
+  /** Live preview line, replaced wholesale on each update. */
+  onPartial?: (text: string) => void;
+  /** Daemon endpoint for the `local` engine. */
+  wsUrl?: string;
   /** Server-measured timing for each window, so the UI shows real numbers. */
   onMetrics?: (m: {
     provider: string;
+    /**
+     * Groq: one window's server round-trip. Local: wall time since the socket
+     * opened, which keeps climbing for the whole take — prefer `firstTokenMs`.
+     */
     latencyMs: number;
-    windowMs: number;
+    /** Local engine only: time until the first token arrived. */
+    firstTokenMs?: number;
+    windowMs?: number;
     fellBack?: boolean;
     fellBackFrom?: string;
     failReason?: string;
@@ -59,6 +75,16 @@ function isoToWhisper(lang: string) {
   if (lang.startsWith("ja")) return "ja";
   if (lang.startsWith("ko")) return "ko";
   return lang.split("-")[0] || "zh";
+}
+
+/** Float32 -1..1 → Int16, matching what the local daemon expects on the wire. */
+function toInt16(f32: Float32Array): Int16Array {
+  const pcm = new Int16Array(f32.length);
+  for (let i = 0; i < f32.length; i++) {
+    const v = Math.max(-1, Math.min(1, f32[i]));
+    pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+  }
+  return pcm;
 }
 
 const WORKLET_SRC = `
@@ -92,6 +118,8 @@ export function createLiveCaptions(opts: LiveCaptionsOptions): LiveCaptions {
   let line = "";
   /** Recognizer instance when running in Browser STT mode. */
   let recognizer: any = null;
+  /** Streaming session when running in Local mode. */
+  let local: LocalCaptions | null = null;
 
   const WINDOW = Math.max(800, opts.windowMs ?? WINDOW_MS);
   const STEP = Math.max(400, Math.min(opts.stepMs ?? STEP_MS, WINDOW - 400));
@@ -146,6 +174,7 @@ export function createLiveCaptions(opts: LiveCaptionsOptions): LiveCaptions {
   };
 
   const submitWindow = async () => {
+    // Local mode streams continuously; there is no window to submit.
     if (!running || opts.engine !== "groq") return;
 
     const windowSamples = Math.floor((WINDOW / 1000) * TARGET_RATE);
@@ -202,6 +231,8 @@ export function createLiveCaptions(opts: LiveCaptionsOptions): LiveCaptions {
 
   const scheduleNext = () => {
     if (!running) return;
+    // Don't arm the window timer for local mode — nothing is submitted that way.
+    if (opts.engine === "local") return;
     timer = setTimeout(() => {
       void submitWindow();
       scheduleNext();
@@ -254,6 +285,7 @@ export function createLiveCaptions(opts: LiveCaptionsOptions): LiveCaptions {
     running = true;
     opts.onStatus?.({ state: "listening" });
 
+    // Local mode still needs the mic, so it shares the Groq capture path below.
     if (opts.engine === "browser") {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -291,11 +323,35 @@ export function createLiveCaptions(opts: LiveCaptionsOptions): LiveCaptions {
 
     const src = ctx.createMediaStreamSource(stream);
 
+    // Local mode forwards every frame straight to the daemon; no ring buffer.
+    if (opts.engine === "local") {
+      local = createLocalCaptions({
+        ...(opts.wsUrl ? { wsUrl: opts.wsUrl } : {}),
+        language: opts.language,
+        onSegment: opts.onSegment,
+        ...(opts.onPartial ? { onPartial: opts.onPartial } : {}),
+        ...(opts.onStatus ? { onStatus: opts.onStatus } : {}),
+        // ⚠️ 這三個漏掉不會報錯，只是功能默默消失 ——
+        //    onMetrics 漏了 → 設定頁的首字延遲永遠是「—」
+        //    onLevel  漏了 → 收音音量條永遠空白
+        //    兩者都沒有任何錯誤訊息，只能靠看畫面發現。
+        ...(opts.onMetrics ? { onMetrics: opts.onMetrics } : {}),
+        ...(opts.onLevel ? { onLevel: opts.onLevel } : {}),
+      });
+      local.ready.catch(() => {
+        /* surfaced through onStatus already */
+      });
+    }
+
     try {
       workletUrl = URL.createObjectURL(new Blob([WORKLET_SRC], { type: "application/javascript" }));
       await ctx.audioWorklet.addModule(workletUrl);
       const wn = new AudioWorkletNode(ctx, "sf-capture");
-      wn.port.onmessage = (e) => push(resample(e.data));
+      wn.port.onmessage = (e) => {
+        const frame = resample(e.data);
+        if (local) local.push(toInt16(frame));
+        else push(frame);
+      };
       src.connect(wn);
       // A worklet only runs while connected to a destination; keep it silent.
       const mute = ctx.createGain();
@@ -305,7 +361,11 @@ export function createLiveCaptions(opts: LiveCaptionsOptions): LiveCaptions {
     } catch {
       // Safari / Firefox fallback
       const sp = ctx.createScriptProcessor(4096, 1, 1);
-      sp.onaudioprocess = (e) => push(resample(new Float32Array(e.inputBuffer.getChannelData(0))));
+      sp.onaudioprocess = (e) => {
+        const frame = resample(new Float32Array(e.inputBuffer.getChannelData(0)));
+        if (local) local.push(toInt16(frame));
+        else push(frame);
+      };
       src.connect(sp);
       const mute = ctx.createGain();
       mute.gain.value = 0;
@@ -320,6 +380,8 @@ export function createLiveCaptions(opts: LiveCaptionsOptions): LiveCaptions {
     running = false;
     if (timer) clearTimeout(timer);
     timer = null;
+    local?.stop();
+    local = null;
     if (recognizer) {
       recognizer.onend = null;
       try {
