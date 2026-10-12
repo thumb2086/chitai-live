@@ -4,6 +4,7 @@ import {
 } from "@/lib/captions-groq";
 import { getOrCreateUser, getSessionId, unauthorized } from "@/lib/getUser";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/usage";
+import { audioSecondsToCredits, usageNote } from "@/lib/ai-cost";
 
 export const dynamic = "force-dynamic";
 // Audio upload + a Whisper round trip; keep well under the platform ceiling.
@@ -75,9 +76,20 @@ export async function POST(req: Request) {
   if (!user) return unauthorized();
 
   const windowSec = Math.max(1, Math.round(windowMs / 1000));
-  const quota = await checkQuota(user.id, "caption_minutes", windowSec / 60);
-  if (!quota.allowed) {
-    return NextResponse.json({ error: quotaMessage("caption_minutes", quota, " 分鐘") }, { status: 429 });
+
+  // ── 唯一的額度判斷：ai_credits ────────────────────────────
+  //
+  // 原本這裡還有一道 caption_minutes 的檢查，現在拿掉了。
+  // 兩個上限並存時，`caption_minutes` 一定先撞到（ai_credits 的數字寬鬆 8~24 倍），
+  // 於是 ai_credits 永遠只是裝飾 —— 而「永遠不會觸發的額度」比沒有額度更糟，
+  // 因為它在方案頁上讓人以為有這回事。
+  //
+  // 時間（caption_minutes）改為**只記錄不擋**，用途是用量明細的
+  // 分項顯示（「這期轉了 1,200 分鐘字幕，合計 50.4 點」）。
+  const wantCredits = audioSecondsToCredits(windowSec);
+  const creditQuota = await checkQuota(user.id, "ai_credits", wantCredits);
+  if (!creditQuota.allowed) {
+    return NextResponse.json({ error: quotaMessage("ai_credits", creditQuota, " 點") }, { status: 429 });
   }
 
   try {
@@ -96,6 +108,17 @@ export async function POST(req: Request) {
 
     // Meter the audio that was actually decoded, not the caller's claim about it.
     const billedSec = Math.max(1, Math.round(r.durationSec || windowSec));
+
+    // 點數 = 唯一的額度帳。它決定這次呼叫該不該被允許。
+    await recordUsage(
+      user.id,
+      "ai_credits",
+      audioSecondsToCredits(billedSec),
+      usageNote("字幕轉寫", `${r.provider}/${model} · ${billedSec}s`)
+    );
+
+    // 分鐘 = 只記錄，用於用量明細的分項顯示，不再是獨立額度。
+    // 秒數取實際解碼出來的值（與上面同一個 billedSec），不是呼叫端宣稱的時長。
     await recordUsage(user.id, "caption_minutes", billedSec / 60, `Groq ${r.provider}/${model}`);
 
     return NextResponse.json({

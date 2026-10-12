@@ -35,6 +35,32 @@ const METRIC_LABEL: Record<string, string> = {
   replay_minutes: "回放分析",
 };
 
+/**
+ * 數量格式化 —— 每種計量單位的小數位不同。
+ *
+ * ai_credits 是**點數**，單次呼叫的量極小（0.0007/秒），
+ * 用 toLocaleString() 會顯示成 0.001，看起來像沒有在動 ——
+ * 那正是「方案頁顯示已用 0」的同一種病，只是换了個scale。
+ *
+ * caption_minutes 一秒窗是 0.0167 分鐘，保留 0 位會把整串短窗
+ * 全部顯示成 0（usage.ts 的註解記過這個坑）。
+ *
+ * 所以：按 metric 決定精度，而不是全站統一。
+ */
+const METRIC_DIGITS: Record<string, number> = {
+  ai_credits: 4,
+  caption_minutes: 1,
+  replay_minutes: 1,
+};
+
+function fmtQty(metric: string, n: number): string {
+  const digits = METRIC_DIGITS[metric] ?? 0;
+  return Number(n).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
+  });
+}
+
 export default function UsagePage() {
   const { data, loading, error, reload } = useAsync<Payload>(
     () => fetch("/api/v1/membership").then((r) => {
@@ -92,7 +118,12 @@ export default function UsagePage() {
       ) : (
         <>
           <div className="member-plan-grid">
-            {quotas.map((q) => {
+            {/* caption_minutes 不再是額度（只有 ai_credits 擋），所以不佔額度卡版面。
+                它仍在 plans.ts 裡，被 getMembership 讀出來會顯示 ——
+                這裡過濾掉，否則使用者會看到兩張都在講同一件事的卡片。 */}
+            {quotas
+              .filter((q) => q.metric !== "caption_minutes")
+              .map((q) => {
               const pct = q.limit > 0 ? Math.min(100, Math.round((q.used / q.limit) * 100)) : 0;
               const over = q.used > q.limit;
               return (
@@ -103,7 +134,7 @@ export default function UsagePage() {
                   </div>
 
                   <p className="member-balance">
-                    {q.used.toLocaleString()}
+                    {fmtQty(q.metric, q.used)}
                     <span className="member-muted"> / {q.limit.toLocaleString()} {q.unit}</span>
                   </p>
 
@@ -125,12 +156,12 @@ export default function UsagePage() {
                     )
                   ) : (
                     <p className="member-expiry">
-                      <TrendingUp size={12} /> 近 30 天 {(byMetric[q.metric] ?? 0).toLocaleString()} {q.unit}
+                      <TrendingUp size={12} /> 近 30 天 {fmtQty(q.metric, byMetric[q.metric] ?? 0)} {q.unit}
                     </p>
                   )}
                 </section>
               );
-            })}
+              })}
           </div>
 
           <section className="member-ai-rates">
@@ -160,14 +191,20 @@ export default function UsagePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {usage.map((u) => (
-                      <tr key={u.id}>
-                        <td>{new Date(u.createdAt).toLocaleString("zh-TW")}</td>
-                        <td>{labelFor(u.metric)}</td>
-                        <td>{u.quantity.toLocaleString()}</td>
-                        <td className="member-muted">{u.note || "—"}</td>
-                      </tr>
-                    ))}
+                    {/* caption_minutes 是 ai_credits 的「同一筆呼叫的另一種單位」，
+                        不是第二次扣費。顯示兩行會讓人以為扣了兩次，
+                        而「同一件事記兩筆帳」正是最難向使用者解釋的那種 bug。
+                        這裡只顯示真正的扣費項（點數 / 疊加層 / 回放分鐘）。 */}
+                    {usage
+                      .filter((u) => u.metric !== "caption_minutes")
+                      .map((u) => (
+                        <tr key={u.id}>
+                          <td>{new Date(u.createdAt).toLocaleString("zh-TW")}</td>
+                          <td>{labelFor(u.metric)}</td>
+                          <td>{fmtQty(u.metric, u.quantity)}</td>
+                          <td className="member-muted">{u.note || "—"}</td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
