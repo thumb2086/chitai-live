@@ -34,9 +34,13 @@ export default function Home() {
         <h1 className="text-[clamp(24px,5vw,32px)] font-[600] leading-[1.2] text-white">
           創作者控制中心
         </h1>
-        {/* ★ 原本寫「免費開源」。我們現在要收子熙幣，
-            繼續寫「免費」是誤導 —— 不是功能不能用，是要付費。
-            「開源」也拿掉了：那不是真的開源，倉庫是公開的但沒有 LICENSE 宣告。 */}
+        {/* ★ 原先這裡寫「免費開源」。兩個問題分開處理：
+            「免費」是誤導 —— 我們現在收子熙幣，功能不是不用付錢就不能用。
+            「開源」更麻煩：專案裡沒有 LICENSE 檔、git 也沒追蹤任何 LICENSE，
+            所以宣稱 MIT 是無憑據的。真要開源就補 LICENSE 檔，
+            否則不要在頁面上寫。
+            MIT 授權的程式碼可以搭配付費服務，那沒問題；
+            問題是「宣稱了但沒有對應的授權檔」。 */}
         <p className="text-[14px] leading-[1.6] text-white/60">
           直播互動工具。斗內、聊天室、即時字幕、疊加層、OBS 串接。<br />
           以<b className="text-white/85">子熙幣</b>儲值計費，不綁月費。
@@ -56,7 +60,7 @@ export default function Home() {
         </div>
 
         <p className="text-[12px] text-white/30">
-          免費・開源 MIT・使用 Twitch/Google 帳號快速登入
+          子熙幣儲值・不綁月費・Twitch/Google 快速登入
         </p>
       </div>
     </div>
