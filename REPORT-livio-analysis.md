@@ -79,7 +79,7 @@
 
 ## 四、設計系統差異
 
-| 項目 | livio.tw | streamflow (我們) |
+| 項目 | livio.tw | 熾台（我們） |
 |---|---|---|
 | Surface 顏色 | 5 層材質 | 5 層 ✅ |
 | 字型 | Saans + Inter + Noto Sans TC | Geist Sans (Google Font 替代) |

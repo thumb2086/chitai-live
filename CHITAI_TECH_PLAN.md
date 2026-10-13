@@ -1,4 +1,4 @@
-# StreamFlow — 開源技術規劃
+# 熾台 — 開源技術規劃
 
 > 以現有 `livestream-dashboard` 為基礎，加入 Groq 逐字稿、剪輯功能、Web Speech API、子熙幣生態，全面開源重構。
 

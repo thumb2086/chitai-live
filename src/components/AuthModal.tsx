@@ -24,7 +24,7 @@ export default function AuthModal() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#ff5600", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "14px", fontWeight: "bold" }}>SF</div>
-                <span style={{ fontSize: "17px", fontWeight: 600, color: "#111" }}>登入 StreamFlow</span>
+                <span style={{ fontSize: "17px", fontWeight: 600, color: "#111" }}>登入 熾台</span>
               </div>
               <button onClick={() => setOpen(false)} style={{ width: "32px", height: "32px", borderRadius: "8px", border: "1px solid #e5e2dd", background: "#f4f3f1", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#111" }}>
                 <X size={16} />

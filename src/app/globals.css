@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * StreamFlow design tokens.
+ * 熾台 design tokens.
  *
  * Values mirror the reference creator console (livio.tw) dashboard bundle.
  * The dashboard scope re-declares these on [data-livecore-entry="dashboard"]

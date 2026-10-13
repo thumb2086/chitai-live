@@ -73,7 +73,7 @@ export default function ZixiPage() {
             ) : (
               <div className="mt-4">
                 <div className="mb-3 text-[13px] text-[var(--ic-ink-muted)] leading-[1.6]">
-                  將你的 ZIXI Casino 帳戶連接到 StreamFlow，啟用捐款與錢包查詢功能。
+                  將你的 ZIXI Casino 帳戶連接到 熾台，啟用捐款與錢包查詢功能。
                 </div>
                 <a href="/api/auth/zixi" className="flex w-fit items-center gap-2 rounded-[var(--ic-radius-md)] border border-transparent bg-[var(--ic-primary)] px-4 py-2.5 text-[13px] font-[500] text-white no-underline hover:bg-[var(--ic-primary-hover)]">
                   <LogIn className="h-4 w-4" /> 連線 ZIXI 帳戶

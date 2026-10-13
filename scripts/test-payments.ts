@@ -32,7 +32,7 @@ const order: Record<string, string> = {
   MerchantID: "1234567",
   TradeNo: "SF20261003001AB",
   TradeAmt: "150",
-  ItemName: "StreamFlow Pro 方案",
+  ItemName: "熾台 Pro 方案",
   TradeDate: "2026-10-03 12:00:00",
   RtnCode: "1",
 };

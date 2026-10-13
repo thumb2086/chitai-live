@@ -73,7 +73,7 @@ export async function downloadAudio(
     res = await fetch(url, {
       signal: controller.signal,
       redirect: "follow",
-      headers: { "User-Agent": "StreamFlow-ReplayAnalysis/1.0" },
+      headers: { "User-Agent": "Chitai-ReplayAnalysis/1.0" },
     });
   } catch (e: any) {
     clearTimeout(timer);

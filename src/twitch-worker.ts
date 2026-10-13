@@ -2,7 +2,7 @@
  * Twitch IRC Chat Worker
  *
  * Connects to Twitch IRC, listens for chat messages,
- * and relays them to the StreamFlow chat API.
+ * and relays them to the 熾台 chat API.
  *
  * Usage: npx tsx src/twitch-worker.ts
  * Requires: TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, CHAT_WORKER_KEY in .env

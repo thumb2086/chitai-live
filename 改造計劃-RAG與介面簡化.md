@@ -355,11 +355,11 @@ WSL 在 `~/build/livestream-dashboard`（795 GB 可用）。
 
 ## 12. 新發現：品牌已經存在
 
-**站名早就是「StreamFlow 創作者控制中心」**，登入頁還寫著
-「免費開源的直播工具平台」「MIT」。專案裡也有 `STREAMFLOW_ARCHITECTURE.md`、
-`STREAMFLOW_TECH_PLAN.md`。
+**站名早就是「熾台 創作者控制中心」**，登入頁還寫著
+「免費開源的直播工具平台」「MIT」。專案裡也有 `CHITAI_ARCHITECTURE.md`、
+`CHITAI_TECH_PLAN.md`。
 
 所以 §9 待決事項第 3 條要改成一個真正的選擇：
 
-- **沿用 StreamFlow**（有 logo「SF」、有架構文件、登入頁已寫好）
+- **沿用 熾台**（有 logo「SF」、有架構文件、登入頁已寫好）
 - 換新名字（那要一起改 logo、標題、架構文件檔名）

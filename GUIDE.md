@@ -1,4 +1,4 @@
-# StreamFlow 完整使用指南
+# 熾台 完整使用指南
 
 > 免費開源的直播工具平台 — 斗內進度、聊天室、字幕等疊加層設定與 OBS 連結
 
@@ -55,7 +55,7 @@ DATABASE_URL="file:./prisma/dev.db"
 
 1. 到 https://dev.twitch.tv/console/apps
 2. 點「Register Your Application」
-3. 名稱隨便填（例如 `StreamFlow Dev`）
+3. 名稱隨便填（例如 `熾台 Dev`）
 4. **OAuth Redirect URL** 填入（注意：不要加任何網址參數）：
    ```
    http://localhost:3000/api/auth/callback
@@ -190,7 +190,7 @@ SELECT * FROM OBSSource;
 1. 開啟 OBS Studio
 2. 在來源面板按 `+` → 選擇「Browser Source」
 3. 名稱隨便填（例如「聊天室」）
-4. **URL** 貼上 StreamFlow 提供的疊加層網址
+4. **URL** 貼上 熾台 提供的疊加層網址
 5. 寬度：`1920`，高度：`1080`
 6. 按確定
 

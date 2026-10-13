@@ -120,7 +120,7 @@ export async function POST(req: Request) {
 
       const amt = String(body.amount);
       const token = body.token === "YJC" ? "yjc" : "zhixi";
-      const reason = `StreamFlow donation: ${body.donorName || "anonymous"} → ${body.creatorName || user.username}`;
+      const reason = `熾台 donation: ${body.donorName || "anonymous"} → ${body.creatorName || user.username}`;
 
       const deductRes = await adminAdjustBalance(body.donorAddress, `-${amt}`, token, reason, adminSession);
       if (!deductRes.success) {

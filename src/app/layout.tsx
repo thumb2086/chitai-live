@@ -19,8 +19,8 @@ const CSS_PARTS = [
 ];
 
 export const metadata: Metadata = {
-  title: "StreamFlow 創作者控制中心",
-  description: "免費開源的直播工具平台，包含斗內進度、聊天室、字幕等疊加層設定與 OBS 連結支援。",
+  title: "熾台 CHITAI · 創作者控制中心",
+  description: "熾台直播互動工具：斗內進度、聊天室、即時字幕等疊加層設定與 OBS 連結支援。以子熙幣儲值計費。",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

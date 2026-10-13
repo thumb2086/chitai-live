@@ -26,7 +26,7 @@ export default function TopNav() {
   return (
     <header className="top-nav">
       <Link href="/dashboard" data-link="" className="logo-link">
-        StreamFlow 控制中心
+        熾台 控制中心
       </Link>
 
       <nav className="top-nav-links" aria-label="控制台快捷入口">

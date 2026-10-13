@@ -1,4 +1,4 @@
-# StreamFlow 專案完成度評估報告
+# 熾台 專案完成度評估報告
 
 > 評估日期：2026-06-13 | 專案階段：早期原型 (MVP Skeleton)
 
@@ -38,7 +38,7 @@
 | 頁面 | 問題 |
 |---|---|
 | 聊天室 (`/dashboard/chat`) | 無 WebSocket，`setInterval` 塞假訊息，overlay 網址為 fake domain |
-| OBS 輸出 (`/dashboard/obs`) | URL 為 `streamflow.example`，無實際 overlay route 提供內容 |
+| OBS 輸出 (`/dashboard/obs`) | URL 為 `chitai.example`，無實際 overlay route 提供內容 |
 | 頻道統計 (`/dashboard/stats`) | 手動輸入資料，成長率 `+23%` 等為寫死字串，無 API 整合 |
 | 平台串接 (`/dashboard/connections`) | OAuth 流程為自我 redirect 循環，從未連到 Twitch/YouTube |
 | 測試與整合 (`/dashboard/testing`) | 同聊天室 mock，API 網址為 fake domain |
@@ -53,7 +53,7 @@
 **否。** 所有 overlay 位置設定（聊天室位置、字幕底部置中/頂部置中等）**僅在設定頁面的預覽區塊內可視**。
 
 - 沒有實際的 `/overlay/chat/[token]` 或 `/overlay/subtitles/[token]` 路由
-- 所有 Browser Source URL 指向 `streamflow.example` — 不存在的域名
+- 所有 Browser Source URL 指向 `chitai.example` — 不存在的域名
 - 即使把網址貼到 OBS，也只會得到 404
 
 要讓位置真正可用需要：

@@ -52,7 +52,7 @@ export default async function PublicDonatePage({ params }: { params: Promise<{ u
         )}
 
         <p style={{ marginTop: "24px", textAlign: "center", fontSize: "12px", color: "rgba(255,255,255,0.3)" }}>
-          由 StreamFlow 提供技術支援
+          由 熾台 提供技術支援
         </p>
       </div>
     </div>

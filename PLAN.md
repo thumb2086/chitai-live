@@ -1,4 +1,4 @@
-# StreamFlow 開發計畫
+# 熾台 開發計畫
 
 > 目標：從目前 UI 原型逐步打造成可實際部署的開源直播工具平台
 
@@ -182,7 +182,7 @@ v0.1 (目前) → v0.5 (MVP) → v1.0 (Beta) → v1.5 (生產就緒) → v2.0 (�
 | 移除 `setInterval` 假訊息 | P0 | v1.0 |
 | 字幕背景色 picker bug | P1 | v0.5 |
 | 移除 `soundEffect` 死碼或補上 UI | P1 | v0.5 |
-| 移除 `streamflow.example` 假域名 | P0 | v0.5 |
+| 移除 `chitai.example` 假域名 | P0 | v0.5 |
 | 移除所有 `Math.random()` 填充數據 | P0 | v1.0 |
 | 移除寫死成長率字串 | P0 | v1.0 |
 | localStorage → 資料庫遷移 | P0 | v0.5 |
@@ -250,6 +250,6 @@ npm run test
 
 ### OBS 使用方式
 1. 在 OBS 新增「Browser Source」
-2. 貼上 StreamFlow 提供的 URL（如 `https://your-domain.com/overlay/chat/abc123`）
+2. 貼上 熾台 提供的 URL（如 `https://your-domain.com/overlay/chat/abc123`）
 3. 設定寬度 1920、高度 1080
 4. 按確定 — overlay 即會顯示在直播畫面上

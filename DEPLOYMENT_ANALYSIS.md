@@ -1,7 +1,7 @@
-# StreamFlow 部署平台分析：Vercel vs Render
+# 熾台 部署平台分析：Vercel vs Render
 
 > 分析日期：2026-06-14  
-> 專案：livestream-dashboard (StreamFlow)  
+> 專案：livestream-dashboard (熾台)  
 > 目前階段：v0.1 原型
 
 ---
