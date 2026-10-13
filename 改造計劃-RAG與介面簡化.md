@@ -291,4 +291,75 @@ git 保留、選單隱藏、可還原。理由：刪掉之後要找回來得靠 
 ✅ 2026-10-14  確認 LiveCore 是獨立 repo，不在任何我們的專案底下
 ✅ 2026-10-14  確認 36 頁面 / 31 選單 / 1 個孤兒（giveaways）
 ✅ 2026-10-14  實測 Neon 容量與現有資料量
+✅ 2026-10-14  階段 A 完成：選單 31 → 15 條，17 條路由封存，部署到
+                zixilive.dpdns.org（commit 51948a2）
 ```
+
+### 階段 A 驗收結果（線上實測）
+
+| 項目 | 結果 |
+|---|---|
+| `tsc --noEmit` | 0 錯誤 |
+| `next build` | exit 0 |
+| 已封存 17 條路由 | **全部 HTTP 404**（`text/html` 11.7 KB，Next 的 404 頁） |
+| 保留 16 條路由 | **全部 HTTP 200** |
+| 編譯後 bundle | 4 個新分組全在、14 個新標籤 14/14 命中、**舊標籤殘留 0** |
+| OBS 端點 `/overlay/*` | **11/11 活著**（假 token 回 `text/plain` 9 bytes，與 Next 的 404 是不同來源） |
+| `/api/v1/user` | 401（API 完全沒動） |
+
+### 部署的坑：OpenNext 在 Windows 上崩
+
+```
+npm run cf:build → exit 0xC0000409 (STATUS_STACK_BUFFER_OVERRUN)
+```
+
+OpenNext 1.20.8 自己就印 `WARN OpenNext is not fully compatible with Windows`，
+重跑兩次都一樣崩在同一個位置（印完版本資訊就掛）。
+
+**解法：走 WSL**（OpenNext 官方建議）。已建立可重用的流程：
+
+```bash
+# WSL Ubuntu 已裝 Node 24.21.0（nvm）
+# 專案複製到 WSL 檔案系統（/mnt/c 跑 npm 太慢）
+tar -C "$SRC" -cf - --exclude=node_modules --exclude=.next \
+    --exclude=.open-next --exclude=.git . | tar -C "$DST" -xf -
+
+# wrangler OAuth 認證要手動搬過去（WSL 沒有 Windows 的 xdg 路徑）
+cp /mnt/c/Users/CPXru/AppData/Roaming/xdg.config/.wrangler/config/default.toml \
+   ~/.wrangler/config/default.toml && chmod 600 ~/.wrangler/config/default.toml
+
+cd ~/build/livestream-dashboard && npm install && npm run cf:build && npx wrangler deploy
+```
+
+WSL 在 `~/build/livestream-dashboard`（795 GB 可用）。
+
+### ⚠️ 登入后才能验的东西，我没能验
+
+**線上是 OAuth-only（Twitch / Google 登入），我沒有那些帳號。**
+所以以下**只驗到路由層與編譯產物，沒有用眼睛看到渲染結果**：
+
+- 側邊選單在瀏覽器裡實際長什麼樣
+- 抽獎頁面接進選單後點得進去嗎
+- 首頁那 12 張卡片的排版
+
+驗收方式（部署後用 OBU）：
+
+```
+1. 用你的 Twitch/Google 登入 https://zixilive.dpdns.org/dashboard
+2. 對照：選單應該只有 4 組、15 條
+3. 點「抽獎活動」—— 以前根本沒有入口
+4. 點「即時字幕」—— 圖示應該跟「聊天室」不一樣
+```
+
+---
+
+## 12. 新發現：品牌已經存在
+
+**站名早就是「StreamFlow 創作者控制中心」**，登入頁還寫著
+「免費開源的直播工具平台」「MIT」。專案裡也有 `STREAMFLOW_ARCHITECTURE.md`、
+`STREAMFLOW_TECH_PLAN.md`。
+
+所以 §9 待決事項第 3 條要改成一個真正的選擇：
+
+- **沿用 StreamFlow**（有 logo「SF」、有架構文件、登入頁已寫好）
+- 換新名字（那要一起改 logo、標題、架構文件檔名）
