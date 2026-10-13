@@ -4,86 +4,66 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  Globe, Cable, CreditCard, Clapperboard, UserCog,
-  ShoppingBag, CalendarDays, Layers2, Users2, Bell, ScrollText,
-  Target, ClipboardCheck, MoveHorizontal, Trophy, FlaskConical,
-  UserPlus, MessageSquare, Captions, BarChart3, Eye, MonitorPlay,
-  Terminal, Monitor, Crown, Gauge, Receipt, Wallet, Heart, Video,
+  Globe, Cable, Clapperboard, UserCog, Monitor,
+  Bell, ScrollText, Target, Trophy,
+  MessageSquare, Captions, Terminal,
+  Wallet, Heart,
   type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
 
 type Section = { title: string; links: { label: string; href: string; icon: LucideIcon }[] };
 
+/* ★ 2026-10-14：31 條砍成 15 條。
+ *
+ * 砍掉的理由不是「功能壞了」，是我們決定不做（過多功能、過於花俏，
+ * 或與「金流全面改子熙幣」衝突）。頁面本身沒有刪，搬到
+ * src/app/_archive/ —— Next.js 的私有資料夾，自動脫離路由。
+ *
+ * 分組也重排了：原本 6 組 31 條，沒有人能在裡面找到自己要的東西。
+ * 現在按「開台前 → 直播中 → 收錢 → 事後」這個實際順序排。
+ */
 const SECTIONS: Section[] = [
   {
-    title: "控制台",
+    title: "開台前",
     links: [
-      { label: "觀眾斗內頁設定", href: "/dashboard/public-page", icon: Globe },
+      { label: "觀眾斗內頁", href: "/dashboard/public-page", icon: Globe },
       { label: "平台授權", href: "/dashboard/connections", icon: Cable },
-      { label: "金流設定", href: "/dashboard/payment-settings", icon: CreditCard },
-      { label: "回放分析", href: "/dashboard/replay-analysis", icon: Clapperboard },
-      { label: "帳戶設定", href: "/dashboard/account", icon: UserCog },
-    ],
-  },
-  {
-    title: "SHOP 與活動",
-    links: [
-      { label: "周邊商店", href: "/dashboard/commerce", icon: ShoppingBag },
-      { label: "台聚活動", href: "/dashboard/meetups", icon: CalendarDays },
-    ],
-  },
-  {
-    title: "斗內工具",
-    links: [
-      { label: "斗內卡牌", href: "/dashboard/donation-cards", icon: Layers2 },
-      { label: "共用斗內房間", href: "/dashboard/shared-donation-rooms", icon: Users2 },
-      { label: "斗內通知", href: "/dashboard/donations/alerts", icon: Bell },
-      { label: "斗內紀錄", href: "/dashboard/donations/records", icon: ScrollText },
-      { label: "斗內進度條", href: "/dashboard/donations", icon: Target },
-      { label: "斗內影片", href: "/dashboard/donation-video", icon: Video },
-      { label: "影片審核佇列", href: "/dashboard/donation-video/review", icon: ClipboardCheck },
-      { label: "斗內跑馬燈", href: "/dashboard/donation-ticker", icon: MoveHorizontal },
-      { label: "排行榜", href: "/dashboard/leaderboard", icon: Trophy },
-      { label: "測試頁面", href: "/dashboard/testing", icon: FlaskConical },
-    ],
-  },
-  {
-    title: "OVERLAY 與互動",
-    links: [
-      { label: "追隨與訂閱提醒", href: "/dashboard/follower-alert", icon: UserPlus },
-      { label: "聊天室", href: "/dashboard/chat", icon: MessageSquare },
-      { label: "即時字幕", href: "/dashboard/subtitles", icon: Captions },
-      { label: "頻道數據", href: "/dashboard/stats", icon: BarChart3 },
-      { label: "同時觀看人數", href: "/dashboard/live-viewers", icon: Eye },
-      { label: "即時比分板", href: "/dashboard/scoreboard", icon: MonitorPlay },
-      { label: "直播指令機器人", href: "/dashboard/commands", icon: Terminal },
       { label: "OBS 輸出", href: "/dashboard/obs", icon: Monitor },
     ],
   },
   {
-    title: "ZIXI 生態系",
+    title: "直播中",
     links: [
-      { label: "錢包設定", href: "/dashboard/zixi", icon: Wallet },
-      { label: "捐款記錄", href: "/dashboard/zixi/donations", icon: Heart },
+      { label: "聊天室", href: "/dashboard/chat", icon: MessageSquare },
+      { label: "即時字幕", href: "/dashboard/subtitles", icon: Captions },
+      { label: "直播指令", href: "/dashboard/commands", icon: Terminal },
+      // ★ 抽獎本來就有頁面，但從來沒出現在選單裡 ——
+      //   做了卻沒人進得去。2026-10-14 補上。
+      { label: "抽獎活動", href: "/dashboard/giveaways", icon: Trophy },
     ],
   },
   {
-    title: "會員",
+    title: "斗內",
     links: [
-      { label: "會員中心", href: "/dashboard/membership", icon: Crown },
-      { label: "訂閱方案", href: "/dashboard/subscription", icon: CreditCard },
-      { label: "用量與點數紀錄", href: "/dashboard/membership/usage", icon: Gauge },
-      { label: "付款與發票", href: "/dashboard/membership/billing", icon: Receipt },
+      { label: "斗內通知", href: "/dashboard/donations/alerts", icon: Bell },
+      { label: "斗內進度條", href: "/dashboard/donations", icon: Target },
+      { label: "斗內紀錄", href: "/dashboard/donations/records", icon: ScrollText },
+    ],
+  },
+  {
+    title: "事後與帳戶",
+    links: [
+      { label: "回放分析", href: "/dashboard/replay-analysis", icon: Clapperboard },
+      { label: "子熙幣錢包", href: "/dashboard/zixi", icon: Wallet },
+      { label: "捐款記錄", href: "/dashboard/zixi/donations", icon: Heart },
+      { label: "帳戶設定", href: "/dashboard/account", icon: UserCog },
     ],
   },
 ];
 
 const MENU_LINKS = [
-  { label: "會員中心", href: "/dashboard/membership" },
-  { label: "訂閱方案", href: "/dashboard/subscription" },
-  { label: "用量與點數紀錄", href: "/dashboard/membership/usage" },
-  { label: "付款與發票", href: "/dashboard/membership/billing" },
+  { label: "子熙幣錢包", href: "/dashboard/zixi" },
   { label: "帳戶設定", href: "/dashboard/account" },
 ];
 
@@ -170,9 +150,11 @@ export default function Sidebar() {
       </div>
 
       <div className="member-account">
-        <div id="member-account-menu" className="member-account-menu" hidden={!menuOpen}>
-          <p>帳戶與會員</p>
-          <nav aria-label="帳戶與會員">
+        // ★ 會員制在 2026-10-14 砍掉了（金流改子熙幣儲值扣點），
+//   所以這顆選單的名字跟 aria 標籤都不能再寫「會員」。
+<div id="member-account-menu" className="member-account-menu" hidden={!menuOpen}>
+          <p>帳戶</p>
+          <nav aria-label="帳戶">
             {MENU_LINKS.map((l) => (
               <Link key={l.href} href={l.href} data-link="">
                 {l.label}
@@ -190,7 +172,7 @@ export default function Sidebar() {
           onClick={() => setMenuOpen((v) => !v)}
           aria-expanded={menuOpen}
           aria-controls="member-account-menu"
-          aria-label={menuOpen ? "關閉帳戶與會員選單" : "開啟帳戶與會員選單"}
+          aria-label={menuOpen ? "關閉帳戶選單" : "開啟帳戶選單"}
         >
           <span className="member-account-identity">
             <span className="member-avatar" aria-hidden="true">

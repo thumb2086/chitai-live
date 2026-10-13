@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Globe, Cable, MessageSquare, Target, Bell, Monitor, FlaskConical,
-  BarChart3, Terminal, Trophy, Wallet, Check, ArrowRight, Gift, type LucideIcon,
+  Globe, Cable, MessageSquare, Target, Bell, Monitor,
+  BarChart3, Terminal, Trophy, Wallet, Check, ArrowRight, Gift, Captions, type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Loading, Badge } from "@/components/ui";
@@ -16,6 +16,11 @@ type Feature = {
   status: (d: any) => { ready: boolean; text: string };
 };
 
+/* ★ 2026-10-14：13 張 → 12 張，並修掉一個用錯圖示的問題。
+ *
+ * 移除的是「即時比分板」（已搬到 src/app/_archive/，選單也拿掉了）。
+ * 「同時觀看人數」保留 —— 它是 OBS 疊加層，屬於直播中會用到的。
+ */
 const FEATURES: Feature[] = [
   { label: "觀眾斗內頁設定", href: "/dashboard/public-page", icon: Globe, status: (d) => ({ ready: !!d?.publicPage, text: d?.publicPage ? "已啟用" : "未啟用" }) },
   { label: "平台串接", href: "/dashboard/connections", icon: Cable, status: (d) => {
@@ -28,9 +33,10 @@ const FEATURES: Feature[] = [
       return { ready: n > 0, text: n ? `${n} 個目標` : "未設定" };
     } },
   { label: "斗內通知", href: "/dashboard/donations/alerts", icon: Bell, status: (d) => ({ ready: !!overlayOn(d, "donation-alert"), text: overlayOn(d, "donation-alert") ? "已啟用" : "已停用" }) },
-  { label: "即時字幕", href: "/dashboard/subtitles", icon: MessageSquare, status: (d) => ({ ready: !!overlayOn(d, "captions"), text: overlayOn(d, "captions") ? "已啟用" : "已停用" }) },
+  // ★ 這張卡原本用 MessageSquare，跟「聊天室」同一個圖示 ——
+  //   兩張卡看起來一模一樣。字幕就該是字幕的圖示。
+  { label: "即時字幕", href: "/dashboard/subtitles", icon: Captions, status: (d) => ({ ready: !!overlayOn(d, "captions"), text: overlayOn(d, "captions") ? "已啟用" : "已停用" }) },
   { label: "同時觀看人數", href: "/dashboard/live-viewers", icon: BarChart3, status: (d) => ({ ready: !!overlayOn(d, "live-viewers"), text: overlayOn(d, "live-viewers") ? "已啟用" : "已停用" }) },
-  { label: "即時比分板", href: "/dashboard/scoreboard", icon: Trophy, status: (d) => ({ ready: !!overlayOn(d, "scoreboard"), text: overlayOn(d, "scoreboard") ? "已啟用" : "已停用" }) },
   { label: "OBS 輸出", href: "/dashboard/obs", icon: Monitor, status: (d) => {
       const on = (d?.obs ?? []).filter((s: any) => s.enabled).length;
       return { ready: on > 0, text: `${on} 個啟用` };
@@ -46,7 +52,7 @@ const FEATURES: Feature[] = [
       return { ready: open > 0, text: open > 0 ? `${open} 個進行中 · ${total} 報名` : gs.length ? "全部停用" : "尚未建立" };
     } },
   { label: "斗內紀錄", href: "/dashboard/donations/records", icon: Trophy, status: () => ({ ready: true, text: "查看" }) },
-  { label: "ZIXI 錢包", href: "/dashboard/zixi", icon: Wallet, status: (d) => ({ ready: !!d?.user?.zixiWallet, text: d?.user?.zixiWallet ? "已設定" : "未設定" }) },
+  { label: "子熙幣錢包", href: "/dashboard/zixi", icon: Wallet, status: (d) => ({ ready: !!d?.user?.zixiWallet, text: d?.user?.zixiWallet ? "已設定" : "未設定" }) },
 ];
 
 const STEPS = [
