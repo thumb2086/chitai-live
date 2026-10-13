@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const redirectUri = `${req.nextUrl.origin}/api/auth/zixi/callback`;
-    const tokenRes = await fetch(`${ZIXI_API_URL}/oauth/token`, {
+    const tokenRes = await fetch(`${ZIXI_API_URL}/api/oauth/token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

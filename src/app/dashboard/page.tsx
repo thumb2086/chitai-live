@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Globe, Cable, MessageSquare, Target, Bell, Monitor, FlaskConical,
-  BarChart3, Terminal, Trophy, Wallet, Check, ArrowRight, type LucideIcon,
+  BarChart3, Terminal, Trophy, Wallet, Check, ArrowRight, Gift, type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Loading, Badge } from "@/components/ui";
@@ -39,6 +39,12 @@ const FEATURES: Feature[] = [
       const n = d?.commands?.length ?? 0;
       return { ready: n > 0, text: n ? `${n} 個指令` : "尚未建立" };
     } },
+  { label: "抽獎活動", href: "/dashboard/giveaways", icon: Gift, status: (d) => {
+      const gs = d?.giveaways ?? [];
+      const open = gs.filter((g: any) => g.enabled).length;
+      const total = gs.reduce((n: number, g: any) => n + (g.entrants?.length ?? 0), 0);
+      return { ready: open > 0, text: open > 0 ? `${open} 個進行中 · ${total} 報名` : gs.length ? "全部停用" : "尚未建立" };
+    } },
   { label: "斗內紀錄", href: "/dashboard/donations/records", icon: Trophy, status: () => ({ ready: true, text: "查看" }) },
   { label: "ZIXI 錢包", href: "/dashboard/zixi", icon: Wallet, status: (d) => ({ ready: !!d?.user?.zixiWallet, text: d?.user?.zixiWallet ? "已設定" : "未設定" }) },
 ];
@@ -67,8 +73,9 @@ export default function DashboardPage() {
       api.getDonations().catch(() => null),
       api.getCommands().catch(() => null),
       fetch("/api/v1/obs").then((r) => r.json()).catch(() => ({ sources: [] })),
+      api.getGiveaways().catch(() => null),
     ])
-      .then(([o, u, c, don, cmd, obs]) => {
+      .then(([o, u, c, don, cmd, obs, gw]) => {
         setOnboard(o);
         setData({
           user: u,
@@ -76,6 +83,7 @@ export default function DashboardPage() {
           don,
           commands: cmd?.commands ?? [],
           obs: (obs as any).sources ?? [],
+          giveaways: gw?.giveaways ?? [],
         });
       })
       .finally(() => setLoading(false));

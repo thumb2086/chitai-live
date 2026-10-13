@@ -683,6 +683,18 @@ STATE = {"ready": False, "connections": 0, "sessions": 0, "msgs": 0, "dropped": 
          "model": MODEL_DIR.name, "load_s": 0.0, "provider": "cpu",
          "started": time.time()}
 
+# 效能統計（供 /metrics）。
+#
+# 為什麼不放在 STATE：STATE 是「當下狀態」（連線數、就緒與否），
+# 這裡是「累積量」。混在一起會讓 STATE 的每個讀取者都要分辨兩種語意，
+# 而忘記分辨時的症狀是「數字看起來合理但意義錯了」。
+#
+# rtf（real-time factor）= 處理秒數 / 音訊秒數。< 1 才是即時的。
+# 這個值是唯一能回答「伺服器跟不跟得上直播」的指標 ——
+# 記憶體滿不滿不會讓字幕壞掉，但 RTF > 1 會讓字幕愈來愈落後。
+STATS = {"req": 0, "err": 0, "audio_sec": 0.0,
+         "rtf_sum": 0.0, "rtf_n": 0, "rtf_last": None}
+
 
 async def health(_req: web.Request) -> web.Response:
     """監控用。連同 Private Network Access 標頭一起回。"""
@@ -696,6 +708,73 @@ async def health(_req: web.Request) -> web.Response:
         # 要求 cuda 卻被降級成 cpu 時，這裡會誠實地寫 cpu。
         "provider": STATE["provider"],
     }, headers={"Access-Control-Allow-Origin": "*"})
+
+
+def _proc_stat():
+    """讀 /proc/self/status 的記憶體用量（KB）。
+
+    為什麼不讀系統的：這是「這個行程」佔多少，不是「整台機器」。
+    管理端要知道記憶體壓力來自哪裡 —— 如果 daemon 只佔 300MB
+    而系統顯示用了 12GB，那是別的行程（Minecraft）造成的，
+    拿系統數字當成自己的數字會誤導成「記憶體不足」。
+    """
+    rss = peak = 0
+    try:
+        with open("/proc/self/status", "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    rss = int(line.split()[1])
+                elif line.startswith("VmHWM:"):
+                    peak = int(line.split()[1])
+    except OSError:
+        pass
+    return rss, peak
+
+
+def _loadavg():
+    """1/5/15 分鐘負載。回 -1 表示取不到（不可用時要能分辨，不要假裝是 0）。"""
+    try:
+        return [round(x, 2) for x in os.getloadavg()]
+    except (OSError, AttributeError):
+        return [-1.0, -1.0, -1.0]
+
+
+async def metrics(_req: web.Request) -> web.Response:
+    """管理端監控面板的資料來源。
+
+    刻意不放進 /health：那個是給「現在能不能用」判斷用的，
+    加太多欄位會讓它變慢，而且兩者的消費者不同
+    （前端輪詢 vs 管理員看儀表板）。
+    """
+    rss_kb, peak_kb = _proc_stat()
+    la = _loadavg()
+    now = time.time()
+    st = STATS
+    up = max(1e-6, now - STATE["started"])
+    m = st["rtf_sum"]
+    return web.json_response({
+        "ok": STATE["ready"],
+        "uptime_s": round(up, 1),
+        "provider": STATE["provider"],
+        "model": STATE["model"],
+        # ── 記憶體（本行程）──
+        "rss_mb": round(rss_kb / 1024.0, 1),
+        "peak_rss_mb": round(peak_kb / 1024.0, 1),
+        # ── CPU ──
+        "loadavg": la,
+        # ── 流量 ──
+        "connections": STATE["connections"],
+        "req_total": st["req"],
+        "err_total": st["err"],
+        "audio_sec_total": round(st["audio_sec"], 1),
+        "req_per_min": round(st["req"] / (up / 60.0), 2),
+        # ── 效能 ──
+        # RTF（real-time factor）= 處理時間 / 音訊長度。
+        # < 1 表示比即時快。> 1 表示來不及，用戶會看到落後。
+        "rtf_avg": round(m / st["rtf_n"], 4) if st["rtf_n"] else None,
+        "rtf_n": st["rtf_n"],
+        "rtf_last": round(st["rtf_last"], 4) if st["rtf_last"] is not None else None,
+    }, headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-store"})
 
 
 @web.middleware
@@ -863,6 +942,9 @@ def create_app(port: int) -> web.Application:
     app.on_startup.append(on_startup)
     app.add_routes([
         web.get("/health", health),
+        # /metrics 給中轉後台的監控面板輪詢；與 /health 分開是因為
+        # 兩者的消費者與刷新頻率不同（就緒判斷 vs 儀表板）。
+        web.get("/metrics", metrics),
         web.get("/ws", ws_handler),
     ])
     return app

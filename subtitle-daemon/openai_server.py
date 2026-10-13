@@ -169,6 +169,22 @@ async def v1_transcriptions(req):
 
     latency = int((time.perf_counter() - t0) * 1000)
 
+    # 記進 /metrics 的統計。
+    #
+    # 為什麼 RTF 是最重要的指標：記憶體滿了不會讓字幕壞掉，
+    # 但 RTF > 1 代表「處理速度跟不上音訊」—— 用戶看到的是字幕愈來愈落後，
+    # 而伺服器沒有任何錯誤、log 乾淨、/health 回 ok:true。
+    # 那是「沒有任何錯誤訊號卻已經出問題」的典型形狀。
+    _elapsed = time.perf_counter() - t0
+    _st = cd.STATS
+    _st["req"] += 1
+    _st["audio_sec"] += duration
+    if duration > 0:
+        _rtf = _elapsed / duration
+        _st["rtf_sum"] += _rtf
+        _st["rtf_n"] += 1
+        _st["rtf_last"] = _rtf
+
     if resp_fmt == "verbose_json":
         return web.json_response({
             "task": "transcribe",

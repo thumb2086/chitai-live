@@ -52,4 +52,24 @@ export const api = {
   updateCommand: (data: any) => req<{ commands: any[] }>("/commands", { method: "POST", body: JSON.stringify({ _meta: "update", ...data }) }),
   toggleCommand: (id: string, enabled: boolean) => req<{ commands: any[] }>("/commands", { method: "POST", body: JSON.stringify({ _meta: "toggle", id, enabled }) }),
   deleteCommand: (id: string) => req<{ commands: any[] }>("/commands", { method: "POST", body: JSON.stringify({ _meta: "delete", id }) }),
+
+  // 抽獎：後端 13 個端點早就有了，但這裡一直沒接（前端缺頁面）。
+  //
+  // ⚠️ draw / join / clear 的隨機與所有權都在**伺服器端**：
+  //    · draw 的隨機數由伺服器產生（前端抽就能重複抽）
+  //    · join / draw / clear 都檢查 giveaway 屬於自己
+  //    這裡只是薄封裝，不要把那些邏輯搬到前端。
+  getGiveaways: () => req<{ giveaways: any[] }>("/giveaways"),
+  addGiveaway: (data: { title: string; keyword?: string }) =>
+    req<{ giveaways: any[] }>("/giveaways", { method: "POST", body: JSON.stringify({ _meta: "add", ...data }) }),
+  toggleGiveaway: (id: string, enabled: boolean) =>
+    req<{ giveaways: any[] }>("/giveaways", { method: "POST", body: JSON.stringify({ _meta: "toggle", id, enabled }) }),
+  deleteGiveaway: (id: string) =>
+    req<{ giveaways: any[] }>("/giveaways", { method: "POST", body: JSON.stringify({ _meta: "delete", id }) }),
+  joinGiveaway: (id: string, name: string) =>
+    req<{ giveaways: any[] }>("/giveaways", { method: "POST", body: JSON.stringify({ _meta: "join", id, name }) }),
+  drawGiveaway: (id: string) =>
+    req<{ giveaways: any[] }>("/giveaways", { method: "POST", body: JSON.stringify({ _meta: "draw", id }) }),
+  clearGiveaway: (id: string) =>
+    req<{ giveaways: any[] }>("/giveaways", { method: "POST", body: JSON.stringify({ _meta: "clear", id }) }),
 };
