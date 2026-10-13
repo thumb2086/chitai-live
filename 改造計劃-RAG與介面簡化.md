@@ -1,4 +1,4 @@
-# livestream-dashboard 改造計劃（RAG 知識庫 ＋ 介面簡化 ＋ 子熙幣金流）
+# chitai-live 改造計劃（RAG 知識庫 ＋ 介面簡化 ＋ 子熙幣金流）
 
 > 建立日期：2026-10-14
 > 狀態：**待確認後執行**（有 3 項決策還沒回覆，見〈§9 待決事項〉）
@@ -157,7 +157,7 @@ Playlist_Administrator（`C:\Users\...\program\Playlist_Administrator`）是**�
    │
    │  只知道「我要問一個問題」
    ▼
-livestream-dashboard API          ← 認證、額度、扣點、記帳
+chitai-live API          ← 認證、額度、扣點、記帳
    │
    │  唯一記帳點：這次請求是 BYOK 還是我們付
    ▼
@@ -270,7 +270,7 @@ git 保留、選單隱藏、可還原。理由：刪掉之後要找回來得靠 
 而且鏈上扣款本來就適合按次計費。
 
 **③ 品牌名稱？**
-我需要一個名字（中文 + 英文）。目前 `livestream-dashboard` 只是專案名。
+**已定案（2026-10-14）：品牌 = 熾台 CHITAI**，資料夾 = `chitai-live`。
 
 ---
 
@@ -328,10 +328,10 @@ tar -C "$SRC" -cf - --exclude=node_modules --exclude=.next \
 cp /mnt/c/Users/CPXru/AppData/Roaming/xdg.config/.wrangler/config/default.toml \
    ~/.wrangler/config/default.toml && chmod 600 ~/.wrangler/config/default.toml
 
-cd ~/build/livestream-dashboard && npm install && npm run cf:build && npx wrangler deploy
+cd ~/build/chitai-live && npm install && npm run cf:build && npx wrangler deploy
 ```
 
-WSL 在 `~/build/livestream-dashboard`（795 GB 可用）。
+WSL 在 `~/build/chitai-live`（795 GB 可用）。
 
 ### ⚠️ 登入后才能验的东西，我没能验
 
@@ -362,4 +362,4 @@ WSL 在 `~/build/livestream-dashboard`（795 GB 可用）。
 所以 §9 待決事項第 3 條要改成一個真正的選擇：
 
 - **沿用 熾台**（有 logo「SF」、有架構文件、登入頁已寫好）
-- 換新名字（那要一起改 logo、標題、架構文件檔名）
+- **換新名字 → 已採用：熾台 CHITAI**（logo、標題、架構文件檔名皆已改）

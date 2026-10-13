@@ -7,7 +7,7 @@
 ## 一、專案架構
 
 ```
-livestream-dashboard/
+chitai-live/
 ├── prisma/                      # 資料庫 Schema + Migration
 ├── src/
 │   ├── app/                     # Next.js App Router

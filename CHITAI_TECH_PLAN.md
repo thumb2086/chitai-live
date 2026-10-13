@@ -1,6 +1,6 @@
 # 熾台 — 開源技術規劃
 
-> 以現有 `livestream-dashboard` 為基礎，加入 Groq 逐字稿、剪輯功能、Web Speech API、子熙幣生態，全面開源重構。
+> 以現有 `chitai-live` 為基礎，加入 Groq 逐字稿、剪輯功能、Web Speech API、子熙幣生態，全面開源重構。
 
 ---
 
@@ -20,7 +20,7 @@
 ## 功能架構
 
 ```
-livestream-dashboard/
+chitai-live/
 ├── app/
 │   ├── [username]/          # 公開創作者頁
 │   ├── api/                 # REST API
