@@ -150,9 +150,15 @@ export default function Sidebar() {
       </div>
 
       <div className="member-account">
-        // ★ 會員制在 2026-10-14 砍掉了（金流改子熙幣儲值扣點），
-//   所以這顆選單的名字跟 aria 標籤都不能再寫「會員」。
-<div id="member-account-menu" className="member-account-menu" hidden={!menuOpen}>
+        {/* ★ 會員制在 2026-10-14 砍掉了（金流改子熙幣儲值扣點），
+            所以這顆選單的名字跟 aria 標籤都不能再寫「會員」。
+
+            ★ 這裡必須是 JSX 註解語法，不能用雙斜線：
+              JSX children 位置的雙斜線不是註解，是**文字**。
+              之前寫錯的時候，這段字整句出現在線上畫面上，
+              而且建置完全不會報錯 —— JSX 裡的雙斜線是合法文字內容。
+              只能執行才看得到，跟那次的 route() 一模一樣。*/}
+        <div id="member-account-menu" className="member-account-menu" hidden={!menuOpen}>
           <p>帳戶</p>
           <nav aria-label="帳戶">
             {MENU_LINKS.map((l) => (

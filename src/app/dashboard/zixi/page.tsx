@@ -45,9 +45,10 @@ export default function ZixiPage() {
         <span className="text-[var(--ic-ink-muted)]">ZIXI 生態系</span>
       </div>
       <div className="mb-6 grid gap-2">
-        <h1 className="text-[34px] font-[500] leading-[1.12] text-[var(--ic-ink)]">ZIXI 生態系捐款</h1>
+        <h1 className="text-[34px] font-[500] leading-[1.12] text-[var(--ic-ink)]">子熙幣收款設定</h1>
         <p className="max-w-[560px] text-[14px] leading-[1.6] text-[var(--ic-ink-muted)]">
-          串接你的 ZIXI 帳戶，讓觀眾可以透過 子熙幣 (ZXC) 或 佑戩幣 (YJC) 贊助你。
+          讓觀眾用子熙幣（ZXC）或佑戩幣（YJC）直接贊助你的直播。
+          設定分兩步：<strong>① 連線 ZIXI 帳戶　② 填入你的錢包地址</strong>，兩步都完成後公開頁面就能收斗內。
         </p>
       </div>
       <div className="grid grid-cols-[1fr_290px] gap-6 items-start max-lg:grid-cols-1">
@@ -72,11 +73,24 @@ export default function ZixiPage() {
               </div>
             ) : (
               <div className="mt-4">
+                {/* ★ 這段說明要講清楚「會離開這個頁面」，不然使用者以為被丟掉。
+                    實測（2026-10-14）：authorize 端回 needsLogin:true，
+                    必須先在 ZIXI 那邊有帳號並登入才能授權 ——
+                    但頁面上原本完全沒提，症狀看起來就是「跳到賭場沒回來」。 */}
                 <div className="mb-3 text-[13px] text-[var(--ic-ink-muted)] leading-[1.6]">
-                  將你的 ZIXI Casino 帳戶連接到 熾台，啟用捐款與錢包查詢功能。
+                  連線你的 ZIXI 帳戶，觀眾就能用子熙幣（ZXC）或佑戩幣（YJC）贊助你。
+                  <div className="mt-2 rounded-[var(--ic-radius-md)] border border-amber-200 bg-amber-50 p-3 text-[12px] leading-[1.7] text-amber-900">
+                    <strong>需要先有 ZIXI 帳號</strong>。按下後會離開本頁前往 ZIXI 授權，
+                    授權完成會自動回到這裡。ZIXI 帳號免費註冊，錢包地址在註冊後就會給你。
+                  </div>
                 </div>
-                <a href="/api/auth/zixi" className="flex w-fit items-center gap-2 rounded-[var(--ic-radius-md)] border border-transparent bg-[var(--ic-primary)] px-4 py-2.5 text-[13px] font-[500] text-white no-underline hover:bg-[var(--ic-primary-hover)]">
-                  <LogIn className="h-4 w-4" /> 連線 ZIXI 帳戶
+                {/* ★ 用設計系統的 .primary-button，不要自己刻 bg-[var(--ic-primary)] + text-white。
+                    原因：[data-livecore-entry=dashboard] a { color: inherit }
+                    的特異度是 0-1-1，贏過 .text-white 的 0-1-0 ——
+                    結果深色字疊深色底，按鈕文字完全看不見。
+                    .primary-button 特異度 0-2-0，且已經含 color:#ffffff。*/}
+                <a href="/api/auth/zixi" className="primary-button inline-flex items-center gap-2">
+                  <LogIn className="h-4 w-4" /> 前往 ZIXI 授權
                 </a>
               </div>
             )}
@@ -92,9 +106,10 @@ export default function ZixiPage() {
                 <input value={wallet} onChange={e => setWallet(e.target.value)}
                   placeholder="0x..." className="rounded-[var(--ic-radius-md)] border border-[var(--ic-hairline)] bg-[var(--ic-surface-1)] px-3 py-2.5 text-[14px] font-mono text-[var(--ic-ink)] outline-none focus:border-[var(--ic-fin-orange)]" />
               </div>
-              <button onClick={save} disabled={saving}
-                className="flex w-fit min-h-[36px] items-center gap-2 rounded-[var(--ic-radius-md)] border border-transparent bg-[var(--ic-primary)] px-4 text-[13px] font-[500] text-white transition-all hover:bg-[var(--ic-primary-hover)] disabled:opacity-50">
-                {saving ? "儲存中..." : <><Check className="h-4 w-4" /> 儲存</>}
+              {/* 同上：用 .primary-button，這個按鈕因為是 <button> 沒被 a{color:inherit} 蓋到，
+                  但兩處寫法不一致下次改版就會又踩到。*/}
+              <button onClick={save} disabled={saving} className="primary-button">
+                {saving ? "儲存中..." : <><Check className="h-4 w-4" /> 儲存錢包地址</>}
               </button>
             </div>
 
@@ -116,16 +131,20 @@ export default function ZixiPage() {
 
         <div className="sticky top-[82px] grid gap-3.5 rounded-[var(--ic-radius-lg)] border border-[var(--ic-hairline)] bg-[var(--ic-surface-1)] p-[22px]">
           <Wallet className="h-8 w-8 text-[var(--ic-fin-orange)]" />
-          <span className="text-[12px] font-[500] uppercase tracking-[0.04em] text-[var(--ic-ink-subtle)]">如何取得錢包？</span>
+          <span className="text-[12px] font-[500] uppercase tracking-[0.04em] text-[var(--ic-ink-subtle)]">還沒有錢包地址？</span>
           <div className="text-[13px] text-[var(--ic-ink-subtle)] leading-[1.6]">
-            <p className="m-0">到 ZIXI Casino 註冊帳號即可獲得錢包地址。</p>
+            <p className="m-0">到 ZIXI 官網註冊帳號，錢包地址會自動發給你。</p>
           </div>
+          {/* ★ 同樣的原因改用 .primary-button：這顆是 <a>，
+              原本的 text-white 被 [data-...=dashboard] a{color:inherit} 蓋掉，
+              深色字疊深色底，按鈕看起來是空的。*/}
           <a href="https://zixi-casino.vercel.app" target="_blank" rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-1.5 rounded-[var(--ic-radius-md)] border border-transparent bg-[var(--ic-primary)] px-3 py-2.5 text-[13px] font-[500] text-white no-underline hover:bg-[var(--ic-primary-hover)]">
-            <ExternalLink className="h-4 w-4" /> 前往 ZIXI Casino
+            className="primary-button inline-flex w-full items-center justify-center gap-1.5">
+            <ExternalLink className="h-4 w-4" /> 前往 ZIXI 註冊
           </a>
-          <div className="rounded-[var(--ic-radius-md)] border border-[var(--ic-hairline)] bg-[var(--ic-surface-3)] p-3 text-[12px] text-[var(--ic-ink-muted)]">
-            先連線 ZIXI 帳戶再設定錢包地址，觀眾就可以在你的公開頁面使用 ZXC/YJC 贊助你。
+          <div className="rounded-[var(--ic-radius-md)] border border-[var(--ic-hairline)] bg-[var(--ic-surface-3)] p-3 text-[12px] leading-[1.7] text-[var(--ic-ink-muted)]">
+            順序是：<strong>先連線 ZIXI 帳戶</strong> → 再把錢包地址貼進左邊儲存。
+            兩步都完成，觀眾才能在你的公開頁面用 ZXC／YJC 贊助你。
           </div>
         </div>
       </div>

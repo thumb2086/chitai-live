@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Link2, Copy, Check } from "lucide-react";
+import { Link2, Copy, Check, Eye } from "lucide-react";
 import { api } from "@/lib/api";
 
 export default function PublicPage() {
@@ -117,8 +117,27 @@ export default function PublicPage() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--ic-radius-md)] border border-[var(--ic-hairline)] bg-[var(--ic-canvas)] px-3 py-2.5">
               <Link2 className="h-4 w-4 flex-shrink-0 text-[var(--ic-ink-muted)]" />
-              <span className="truncate text-[13px] text-[var(--ic-ink-muted)]">{previewUrl}</span>
+              {/* ★ 用 inline style，不是因為偷懶。
+                  設計系統有 [data-...=dashboard] a { color:inherit; text-decoration:inherit }
+                  特異度 0-1-1，會蓋掉任何工具類（0-1-0）。
+                  實測：text-[#0b5fd0] 與 underline 都被吃掉，
+                  連結看起來跟一般文字一樣，使用者不會知道能點。
+                  inline style 只輸給 !important，這裡沒有正當理由用那麼重的手段。*/}
+              <a href={previewUrl} target="_blank" rel="noopener noreferrer"
+                style={{ color: "#0b5fd0", textDecoration: "underline", textUnderlineOffset: "2px" }}
+                className="truncate text-[13px]"
+                title="在新分頁開啟你的公開頁面">
+                {previewUrl}
+              </a>
             </div>
+            {/* ★ 同時給一個明確的「看頁面」按鈕。
+                只給複製鈕的話，使用者得自己開新分頁貼上網址 ——
+                已經在設定頁了，按一下就看得到效果才對。*/}
+            <a href={previewUrl} target="_blank" rel="noopener noreferrer"
+              className="secondary-button inline-flex min-h-[36px] flex-shrink-0 items-center gap-1.5"
+              title="在新分頁開啟你的公開頁面">
+              <Eye className="h-4 w-4" /> 看頁面
+            </a>
             <button onClick={copyUrl} className="flex min-h-[36px] flex-shrink-0 items-center gap-1.5 rounded-[var(--ic-radius-md)] border border-[var(--ic-hairline)] bg-[var(--ic-surface-1)] px-3 text-[13px] font-[500] text-[var(--ic-ink)] transition-all hover:border-[var(--ic-hairline-strong)]">
               {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
               {copied ? "已複製" : "複製"}
@@ -135,8 +154,22 @@ export default function PublicPage() {
             </button>
           </div>
           <div className="flex items-center gap-2 rounded-[var(--ic-radius-md)] border border-[var(--ic-hairline)] bg-[var(--ic-surface-3)] p-3">
-            {state.publicPage ? <Check className="h-4 w-4 text-green-600" /> : <Link2 className="h-4 w-4 text-[var(--ic-ink-muted)]" />}
-            <span className="text-[13px] text-[var(--ic-ink-muted)]">{state.publicPage ? "頁面已公開，觀眾可瀏覽" : "開啟後觀眾即可瀏覽你的公開頁面"}</span>
+            {state.publicPage ? <Check className="h-4 w-4 flex-shrink-0 text-green-600" /> : <Link2 className="h-4 w-4 flex-shrink-0 text-[var(--ic-ink-muted)]" />}
+            {/* ★ 已公開時整句變成連結。
+                只寫「觀眾可瀏覽」卻不給入口，使用者得自己從上面的網址框複製 ——
+                明明一步就能點，卻要三步。
+                ★ 用色碼而非 var(--ic-ink-muted)：那個是灰色文字，
+                  配綠色勾在看起來像「已停用」。*/}
+            {state.publicPage ? (
+              <a href={previewUrl} target="_blank" rel="noopener noreferrer"
+              style={{ color: "#075e28", textDecoration: "underline", textUnderlineOffset: "2px" }}
+              className="text-[13px] font-[500]"
+              title="在新分頁開啟你的公開頁面">
+              頁面已公開 — 點這裡預覽觀眾看到的樣子
+            </a>
+            ) : (
+              <span className="text-[13px] text-[var(--ic-ink-muted)]">開啟後觀眾即可瀏覽你的公開頁面</span>
+            )}
           </div>
         </div>
       </div>
