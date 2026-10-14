@@ -69,20 +69,27 @@ const MENU_LINKS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  // Two sources on purpose: /api/v1/user for identity, /api/v1/membership for
-  // the plan that is actually GRANTED plus real quota.
-  //
-  // The previous version read User.chosenPlan -- a legacy column whose default is
-  // the localized string for "starter" and which nothing updates when a
-  // subscription is paid -- and read `aiPoints`, a field that does not exist on
-  // the model at all. So the ribbon always rendered its fallback and the plan
-  // label always read "<chosenPlan> · <localized legacy>".
-  const [user, setUser] = useState<{
+  // ★ 2026-10-14：兩個來源。
+//   · /api/v1/user            → 身分（名字、頭像）
+//   · /api/v1/zixi/proxy     → 子熙幣餘額（wallet-summary）
+//
+//   原本的第二個來源是 /api/v1/membership。會員制砍掉之後那三行
+//   （方案名／字幕分鐘數／新制點數）沒有對應的計價方式，
+//   顯示的是沒有意義的殘骸，不是「還沒接上」的狀態。
+//
+//   為什麼餘額要另外抓而不是從 user 帶出來：餘額在 ZIXI 那邊的 D1，
+//   我們這邊只有 OAuth access token，要透過 proxy 才拿得到。
+type WalletState =
+  | { state: "loading" }
+  | { state: "disconnected" }
+  | { state: "error" }
+  | { state: "ok"; zxc: number; yjc: number };
+
+const [user, setUser] = useState<{
     name?: string;
     avatar?: string;
-    plan?: string;
-    captionMinutes?: string;
   }>({});
+  const [wallet, setWallet] = useState<WalletState>({ state: "loading" });
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -90,20 +97,29 @@ export default function Sidebar() {
       .then((u) => setUser((prev) => ({ ...prev, name: u?.name, avatar: u?.avatar })))
       .catch(() => {});
 
-    fetch("/api/v1/membership")
+    // ★ 原本這裡抓 /api/v1/membership，顯示「方案名 + 字幕分鐘數」。
+    //   會員制在 2026-10-14 砍掉了，那三行（FREE／0/120／新制點數尚未啟用）
+    //   全是沒有意義的殘骸。
+    //
+    //   換成「子熙幣餘額」—— 那是使用者真正會想知道的事，
+    //   而且對應到我們實際的計價方式（儲值扣點）。
+    fetch("/api/v1/zixi/proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "wallet-summary" }),
+    })
       .then((r) => (r.ok ? r.json() : null))
-      .then((m) => {
-        if (!m) return;
-        const caption = (m.quotas ?? []).find((q: any) => q.metric === "caption_minutes");
-        setUser((prev) => ({
-          ...prev,
-          plan: String(m.effectivePlan ?? "free").toUpperCase(),
-          captionMinutes: caption
-            ? `${Math.round(caption.used)} / ${caption.limit.toLocaleString()}`
-            : undefined,
-        }));
+      .then((w) => {
+        if (!w) return;
+        if (w.connected === false || !w.summary?.balances) {
+          setWallet({ state: "disconnected" });
+          return;
+        }
+        const zxc = Number(w.summary.balances.ZXC ?? 0);
+        const yjc = Number(w.summary.balances.YJC ?? 0);
+        setWallet({ state: "ok", zxc, yjc });
       })
-      .catch(() => {});
+      .catch(() => setWallet({ state: "error" }));
   }, []);
 
   // Close the account popover whenever the route changes.
@@ -186,19 +202,64 @@ export default function Sidebar() {
             </span>
             <span>
               <strong>{user.name || "未登入"}</strong>
-              <small>{user.plan || "Free"}</small>
+              {/* ★ 原本這裡是方案名（FREE / PRO / ULTRA）。會員制砍掉後
+                  它沒有對應的計價方式 —— 顯示一個永遠不會變的字串
+                  只會讓人以為「方案」還存在。改成連線狀態。*/}
+              <small>
+                {wallet.state === "ok"
+                  ? "子熙幣已連線"
+                  : wallet.state === "loading"
+                    ? "載入中"
+                    : wallet.state === "disconnected"
+                      ? "子熙幣未連線"
+                      : wallet.state === "error"
+                        ? "餘額查詢失敗"
+                        : ""}
+              </small>
             </span>
             <span className="member-chevron" aria-hidden="true">
               ⌃
             </span>
           </span>
+          {/* ★ 原本是「字幕分鐘數 0/120」+「新制點數尚未啟用」。
+              兩行都在講一個已經不存在的會員制。
+              現在顯示的是使用者真正會想知道的事：我還有多少子熙幣。*/}
           <span className="member-points-ribbon">
-            <span>字幕分鐘數</span>
+            <span>子熙幣餘額</span>
             <span>
-              <strong>{user.captionMinutes ?? "—"}</strong>
+              {wallet.state === "ok" ? (
+                <strong>
+                  ZXC {wallet.zxc.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </strong>
+              ) : wallet.state === "loading" ? (
+                <strong>—</strong>
+              ) : wallet.state === "disconnected" ? (
+                /* 這個連結的顏色不需要另外指定：
+                   .member-points-ribbon 本身就是 color:#c8f7e9（淺色配深青底），
+                   而全站的 a{color:inherit} 會讓它繼承那個顏色 —— 可讀。
+                   只有「看起來不像連結」需要處理，所以補下劃線（inline，
+                   原因同 public-page 那次：工具類輸給 0-1-1 的 a{color:inherit}）。*/
+                <strong>
+                  <Link href="/dashboard/zixi" data-link=""
+                    style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                    去連線 ›
+                  </Link>
+                </strong>
+              ) : (
+                <strong>
+                  <Link href="/dashboard/zixi" data-link=""
+                    style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                    重試 ›
+                  </Link>
+                </strong>
+              )}
             </span>
           </span>
-          <small className="member-expiry">新制點數尚未啟用</small>
+          {wallet.state === "ok" && wallet.yjc > 0 && (
+            <small className="member-expiry">
+              YJC {wallet.yjc.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </small>
+          )}
         </button>
       </div>
     </>
