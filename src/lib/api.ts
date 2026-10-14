@@ -72,4 +72,33 @@ export const api = {
     req<{ giveaways: any[] }>("/giveaways", { method: "POST", body: JSON.stringify({ _meta: "draw", id }) }),
   clearGiveaway: (id: string) =>
     req<{ giveaways: any[] }>("/giveaways", { method: "POST", body: JSON.stringify({ _meta: "clear", id }) }),
+
+    // ── 知識庫（2026-10-14）─────────────────────────────
+    //
+    // ★ search 與 ask 分開，不是多餘：
+    //   生成要花 Groq 的錢，而「東西在不在知識庫裡」不該花錢。
+    //   search 的結果先給使用者看，要不要展開成回答由他決定。
+    ragStats: () => req<{
+      ok: boolean; total: number;
+      byType: { type: string; n: number }[];
+      captionSegments: number; captionIndexed: number;
+    }>("/rag"),
+    ragIndex: () => req<{ ok: boolean; synced: number; chunks: number }>("/rag", {
+      method: "POST", body: JSON.stringify({ action: "index" }),
+    }),
+    ragSearch: (q: string, topK = 5) => req<{
+      ok: boolean;
+      results: {
+        id: string; sourceType: string; sourceId: string;
+        text: string; similarity: number;
+      }[];
+    }>("/rag", { method: "POST", body: JSON.stringify({ action: "search", query: q, topK }) }),
+    ragAsk: (question: string, topK = 5) => req<{
+      ok: boolean; answer: string;
+      // ★ grounded：這次回答有沒有真的用到知識庫。
+      //   沒有 sources 卻看起來像在回答，是最需要被標示出來的情況。
+      grounded: boolean;
+      sources: { id: string; sourceType: string; sourceId: string; text: string; similarity: number }[];
+      usage?: { promptTokens: number; completionTokens: number };
+    }>("/rag", { method: "POST", body: JSON.stringify({ action: "ask", question, topK }) }),
 };

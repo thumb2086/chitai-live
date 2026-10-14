@@ -7,7 +7,7 @@ import {
   Globe, Cable, Clapperboard, UserCog, Monitor,
   Bell, ScrollText, Target, Trophy,
   MessageSquare, Captions, Terminal,
-  Wallet, Heart,
+  Wallet, Heart, Library,
   type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -55,6 +55,10 @@ const SECTIONS: Section[] = [
     title: "事後與帳戶",
     links: [
       { label: "回放分析", href: "/dashboard/replay-analysis", icon: Clapperboard },
+      // 知識庫（2026-10-14）：字幕／YT／Podcast 統一檢索 + 問答。
+      // 放在「事後與帳戶」而不是「直播中」——
+      // 它是回頭查東西的工具，不是開台時要盯的畫面。
+      { label: "知識庫", href: "/dashboard/knowledge", icon: Library },
       { label: "子熙幣錢包", href: "/dashboard/zixi", icon: Wallet },
       { label: "捐款記錄", href: "/dashboard/zixi/donations", icon: Heart },
       { label: "帳戶設定", href: "/dashboard/account", icon: UserCog },
