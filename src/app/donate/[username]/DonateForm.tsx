@@ -11,6 +11,24 @@ interface Props {
   recentDonations: string;
 }
 
+
+/**
+ * 捐款級距（2026-10-14）。
+ *
+ * 為什麼要帶名字：原本只有一個空白數字輸入框，使用者不知道多少算合理，
+ * 於是隨便填或乾脆不填。
+ *
+ * ★ 名稱與金額是我們自己定的，不是照抄任何競品 ——
+ *   參考的只是「有名字的級距」這個概念（好過空白輸入框）。
+ *   「應援」用語在台灣實況圈通用，且直接說明用途、不承諾回報。
+ */
+const TIERS = [
+  { icon: "🩵", label: "應援",     value: 100,  note: "單純支持一下" },
+  { icon: "💛", label: "推一把",   value: 500,  note: "幫你加油打氣" },
+  { icon: "🎁", label: "揪團禮",   value: 2000, note: "一起看更划算" },
+  { icon: "🚀", label: "大力挺",   value: 10000, note: "這場很值" },
+] as const;
+
 export default function DonateForm({ username, zixiWallet, goals, totalReceived, recentDonations }: Props) {
   const [copied, setCopied] = useState(false);
   const [name, setName] = useState("");
@@ -213,8 +231,34 @@ export default function DonateForm({ username, zixiWallet, goals, totalReceived,
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="你的名稱（顯示在斗內通知）"
               style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#fff", fontSize: "13px", outline: "none", boxSizing: "border-box" }} />
-            <input value={amount} onChange={e => setAmount(e.target.value)} type="number" placeholder="數量"
-              style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#fff", fontSize: "13px", outline: "none", boxSizing: "border-box" }} />
+            {/* ★ 捐款級距：給一個起點，而不是空白輸入框。
+                選了級距之後，下面仍可自訂 —— 級距是起點不是限制。*/}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              {TIERS.map(t => {
+                const active = amount === String(t.value);
+                return (
+                  <button key={t.label} type="button" onClick={() => setAmount(String(t.value))}
+                    aria-pressed={active}
+                    title={t.note}
+                    style={{
+                      padding: "9px 10px", borderRadius: "8px", cursor: "pointer", textAlign: "left",
+                      border: active ? "2px solid #ff5600" : "1px solid rgba(255,255,255,0.1)",
+                      background: active ? "rgba(255,86,0,0.12)" : "transparent",
+                      color: "#fff",
+                    }}>
+                    <div style={{ fontSize: "12px", fontWeight: 700, lineHeight: 1.3 }}>{t.icon} {t.label}</div>
+                    <div style={{ fontSize: "10px", color: active ? "#ffb38a" : "#8b93a7", marginTop: 2 }}>
+                      {t.value.toLocaleString()} {token}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <input value={amount} onChange={e => setAmount(e.target.value)} type="number" placeholder="或自訂金額" aria-label="捐款金額"
+                style={{ flex: 1, padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#fff", fontSize: "13px", outline: "none", boxSizing: "border-box" }} />
+              <div style={{ fontSize: "13px", color: "#8b93a7", whiteSpace: "nowrap" }}>{token}</div>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
               <div onClick={() => setToken("ZXC")} style={{ padding: "10px", borderRadius: "8px", textAlign: "center", cursor: "pointer", border: token === "ZXC" ? "2px solid #ff5600" : "1px solid rgba(255,255,255,0.1)" }}>
                 <div style={{ fontSize: "9px", color: "#ff5600", fontWeight: 700, textTransform: "uppercase" }}>子熙幣</div>
