@@ -57,6 +57,58 @@ function client() {
 
 export type Row = Record<string, unknown>;
 
+// ══════════════════════════════════════════════════════════
+// 查詢逾時
+// ══════════════════════════════════════════════════════════
+//
+// 為什麼需要（2026-10-14 補）：
+//
+// Workers 上一個沒有 timeout 的 fetch 可以**永久掛住**。而呼叫端
+// 多數是 server component，症狀不是錯誤畫面 —— 是 app/loading.tsx
+// 的「載入中…」永遠留在畫面上。沒有錯誤、沒有 500、沒有 log。
+//
+// 而且「再等等」不會變好：Workers 的 CPU 時間到上限會直接中止整個請求，
+// 連逾時錯誤都不會有。所以等待只會把「失敗得很清楚」變成「失敗得沒線索」。
+//
+// 選 Promise.race 而不是 AbortSignal：
+// neon() 的 query() 在不同版本對 signal 的支援不一致，
+// 而 race 只需要一個會 reject 的 timer，與底層是 fetch 還是 driver 無關。
+export const QUERY_TIMEOUT_MS = Number(process.env.DB_QUERY_TIMEOUT_MS || 8000);
+
+export class QueryTimeoutError extends Error {
+  constructor(ms: number, sql: string) {
+    super(`資料庫查詢逾時（${ms}ms）：${sql}`);
+    this.name = "QueryTimeoutError";
+  }
+}
+
+/**
+ * 只留 SQL 的「形狀」進錯誤訊息 —— 參數可能是 token、個資、會話。
+ * 把 params 印出來等於把秘密寫進 log。
+ */
+function sqlShape(text: string): string {
+  return text.replace(/\s+/g, " ").trim().slice(0, 120);
+}
+
+function rejectAfter(ms: number, text: string): Promise<never> {
+  return new Promise<never>((_, reject) => {
+    // ★ 這裡**不能** unref()。
+    //
+    //   我第一版加了 unref 想「不要拖住 event loop」——
+    //   而那正好把逾時機制整個廢掉：
+    //   unref 掉的 timer 不會讓 Node 保持存活，
+    //   若當下沒有別的在途工作，行程會直接結束，
+    //   reject 永遠不會發生，呼叫端拿到的不是逾時錯誤而是「沒有結果」。
+    //
+    //   實測（tools/test-db-timeout.ts，2026-10-14）：
+    //   加了 unref → 測試在第一段之後直接 exit 0，逾時路徑沒被執行到。
+    //   拿掉 unref → 逾時如預期發生。
+    //
+    //   timer 的職責就是「維持 loop 直到它觸發」，unref 是自我否定。
+    setTimeout(() => reject(new QueryTimeoutError(ms, sqlShape(text))), ms);
+  });
+}
+
 /**
  * 跑一個參數化查詢並回傳列陣列。
  *
@@ -90,7 +142,10 @@ export async function query<T extends object = Row>(
   //    ⚠️ 而回傳值需要 **params 的實際型別**才能推導列型別，
   //       這裡做不到（參數是 unknown[]），
   //       所以型別斷言是必要的，而不是偷懶。
-  const res = (await client().query(text, params as never[])) as
+  const res = (await Promise.race([
+    client().query(text, params as never[]),
+    rejectAfter(QUERY_TIMEOUT_MS, text),
+  ])) as
     | T[]
     | { rows: T[] }
     | null;
@@ -178,11 +233,16 @@ export async function transaction(
   queries: Array<[string, unknown[]?]>,
 ): Promise<unknown[]> {
   const sql = client();
-  return sql.transaction(
-    queries.map(([text, params]) =>
-      params && params.length ? sql.query(text, params as never[]) : sql.query(text),
+  // 同樣要 timeout：transaction 是批次送出，但底層仍是 fetch，
+  // 掛住的方式跟單一查詢一模一樣。
+  return (await Promise.race([
+    sql.transaction(
+      queries.map(([text, params]) =>
+        params && params.length ? sql.query(text, params as never[]) : sql.query(text),
+      ),
     ),
-  );
+    rejectAfter(QUERY_TIMEOUT_MS, `transaction(${queries.length} 條)`),
+  ])) as unknown[];
 }
 
 /**

@@ -79,9 +79,27 @@ export default async function PublicCreatorPage({ params }: { params: Promise<{ 
 
         <div style={{ background: "#ffffff", borderRadius: "14px", border: "1px solid #e5e2dd", padding: "24px", textAlign: "center" }}>
           <p style={{ margin: "0 0 12px", color: "#6b6b6b", fontSize: "14px" }}>喜歡這個頻道嗎？贊助支持創作者！</p>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "12px 28px", borderRadius: "999px", background: "#ff5600", color: "#ffffff", fontSize: "15px", fontWeight: 600 }}>
-            <Heart size={18} /> 贊助支援（功能即將推出）
-          </div>
+          {/* ★ 這裡原本是一個 <div> 寫著「贊助支援（功能即將推出）」——
+              外觀是橘色膠囊、內含愛心圖示，看起來完全可點，
+              但它是 div 不是 button，點了什麼都不會發生。
+
+              ★ 而「功能即將推出」是錯的：/donate/[username] 早就有完整的
+                DonateForm 與支付鏈路（chargeZixi / confirmZixiCharge），
+                實測回 HTTP 200 且渲染出表單。
+
+              一個看起來能用但不能用的按鈕，比沒有更糟：
+              使用者會以為系統壞了，或以為自己沒錢可捐。*/}
+          <a
+            href={"/donate/" + user.username}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: "8px",
+              padding: "12px 28px", borderRadius: "999px",
+              background: "#ff5600", color: "#ffffff",
+              fontSize: "15px", fontWeight: 600, textDecoration: "none",
+            }}
+          >
+            <Heart size={18} /> 立即贊助
+          </a>
         </div>
       </div>
     </div>
