@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import AuthModal from "./AuthModal";
 import { api } from "@/lib/api";
 
@@ -25,8 +26,15 @@ export default function TopNav() {
 
   return (
     <header className="top-nav">
-      <Link href="/dashboard" data-link="" className="logo-link">
-        熾台 控制中心
+      <Link href="/dashboard" data-link="" className="logo-link" aria-label="熾台 CHITAI 控制中心">
+        <Image
+          src="/logo.svg"
+          alt="熾台 CHITAI"
+          width={32}
+          height={32}
+          className="logo-icon"
+        />
+        <span className="logo-text">熾台 控制中心</span>
       </Link>
 
       <nav className="top-nav-links" aria-label="控制台快捷入口">

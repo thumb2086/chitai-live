@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { oauthRedirectUri } from "@/lib/oauth-origin";
 
 const OAUTH_CONFIG: Record<string, { authUrl: string; clientIdEnv: string; scopes: string; redirectPath: string }> = {
   twitch: {
@@ -47,7 +48,7 @@ code{display:block;background:#f4f3f1;padding:12px;border-radius:8px;font-size:1
 <div class="step"><strong>步驟 1</strong>
 <span>前往 ${platform === "twitch" ? '<a href="https://dev.twitch.tv/console/apps" target="_blank">Twitch Developer Console</a>' : '<a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a>'} 建立應用程式</span></div>
 <div class="step"><strong>步驟 2</strong>
-<span>設定 OAuth Redirect URI 為：<br><code>${_req.nextUrl.origin}/api/auth/callback</code></span></div>
+<span>設定 OAuth Redirect URI 為：<br><code>${oauthRedirectUri(_req)}</code></span></div>
 <div class="step"><strong>步驟 3</strong>
 <span>複製 Client ID 和 Client Secret，填入專案根目錄的 <code>.env</code> 檔案：</span>
 <code>${config.clientIdEnv}=你的_Client_ID</code>
@@ -59,7 +60,10 @@ code{display:block;background:#f4f3f1;padding:12px;border-radius:8px;font-size:1
     );
   }
 
-  const redirectUri = `${_req.nextUrl.origin}/api/auth/callback`;
+  // ★ 這裡曾經是 `${_req.nextUrl.origin}/api/auth/callback`，
+  //   結果本機開發時送出去的是 localhost:3000，Twitch/Google 直接回
+  //   redirect_mismatch。改用設定值（見 lib/oauth-origin 的說明）。
+  const redirectUri = oauthRedirectUri(_req);
   const stateVal = Buffer.from(JSON.stringify({ platform: config.redirectPath })).toString("base64");
 
   const qs = new URLSearchParams({

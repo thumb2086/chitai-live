@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { oauthRedirectUri } from "@/lib/oauth-origin";
 // 2026-10-06：從 Prisma 改成 Neon HTTP（Workers 相容）。
 //
 // ⚠️ 這是**登入入口** —— 沒有它，沒有人能進來。
@@ -41,7 +42,9 @@ export async function GET(req: NextRequest) {
   // Exchange code for tokens
   let tokens: any;
   try {
-    const redirectUri = `${req.nextUrl.origin}/api/auth/callback`;
+    // ★ 必須與 [platform]/route.ts 送出的字串**完全一致** —— OAuth 的
+    //   token 交換會逐一比對，差一個字元就 redirect_mismatch。
+    const redirectUri = oauthRedirectUri(req);
     const tokenRes = await fetch(config.tokenUrl, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },

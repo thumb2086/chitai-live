@@ -13,15 +13,17 @@
         "cf:deploy": "opennextjs-cloudflare deploy"
     },
     "dependencies": {
-        "@neondatabase/serverless": "^1.1.0",
+        "@neondatabase/serverless": "^1.2.0",
         "lucide-react": "^1.18.0",
         "next": "^16.3.8",
         "react": "19.2.4",
         "react-dom": "19.2.4",
-        "tmi.js": "^1.8.5"
+        "tmi.js": "^1.8.5",
+        "zod": "^4.6.7"
     },
     "devDependencies": {
         "@opennextjs/cloudflare": "^1.20.8",
+        "@prisma/client": "^6.0.0",
         "@swc/helpers": "^0.5.23",
         "@tailwindcss/postcss": "^4",
         "@types/node": "^20",
@@ -29,6 +31,7 @@
         "@types/react-dom": "^19",
         "eslint": "^9",
         "eslint-config-next": "16.2.9",
+        "prisma": "^6.0.0",
         "rclone.js": "^0.6.6",
         "tailwindcss": "^4",
         "typescript": "^5",

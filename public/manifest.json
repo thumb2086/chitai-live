@@ -1,0 +1,32 @@
+{
+  "name": "熾台 CHITAI",
+  "short_name": "熾台",
+  "description": "熾台直播互動工具：斗內進度、聊天室、即時字幕等疊加層設定與 OBS 連結支援。以子熙幣儲值計費。",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#ff6b00",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

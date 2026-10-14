@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Gamepad2, TvMinimalPlay } from "lucide-react";
+import Image from "next/image";
+import Logo from "@/public/logo.svg";
 import { api } from "@/lib/api";
 
 export default function Home() {
@@ -22,14 +24,17 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--ic-canvas)] px-4" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }}>
       <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center">
-        <div className="flex items-center gap-3">
-          {/* ★ 原本是「SF」（StreamFlow 的縮寫）。換品牌後 SF 已經沒有意義，
-              換成品牌名的第一個字 —— 看到的人至少知道這是誰的。 */}
-          <div className="flex h-12 w-12 items-center justify-center rounded-[var(--ic-radius-md)] bg-[var(--ic-fin-orange)] text-xl font-bold text-white shadow-lg">熾</div>
-          <div className="flex flex-col items-start">
-            <span className="text-2xl font-[650] tracking-tight text-white">熾台</span>
-            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">CHITAI</span>
-          </div>
+        <div className="flex flex-col items-center gap-2">
+          <Image
+            src="/logo.svg"
+            alt="熾台 CHITAI"
+            width={80}
+            height={80}
+            priority
+            className="drop-shadow-[0_0_20px_theme(colors.orange.500/0.5)]"
+          />
+          <span className="text-2xl font-[650] tracking-tight text-white">熾台</span>
+          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/45">CHITAI</span>
         </div>
         <h1 className="text-[clamp(24px,5vw,32px)] font-[600] leading-[1.2] text-white">
           創作者控制中心
