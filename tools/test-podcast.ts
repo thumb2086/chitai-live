@@ -171,12 +171,17 @@ async function main() {
   }
 
   // ── 轉錄：送網址，不送檔案 ──
-  console.log("\n── 4. 轉錄走中轉（送 audioUrl）──");
+  console.log("\n── 4. 轉錄 ──");
 
-  // ★ 這一段原本測「音檔大小上限」。
-  //   2026-10-14 實測發現那條路根本走不通（Vercel 請求體上限約 4.5 MB，
-  //   而一般 Podcast 單集 8–80 MB），所以改成送 audioUrl。
-  //   原本的斷言是在測一條已經不存在的路徑 —— 留著會給人假的安全感。
+  // ★ 這一段改寫過兩次，每次的原因都寫在 commit 裡：
+  //
+  //   v1 上傳音檔給 groq-router → Vercel 請求體上限約 4.5 MB，失敗
+  //   v2 改送 { audioUrl }    → 繞開限制，但 Worker 要 hold 整個檔案
+  //   v3 換 STT 主機 + X-API-Key → 新端點**只收 multipart**
+  //      （實測錯誤「multipart/* content type expected」）
+  //
+  // 所以 v2 的斷言「不再把音檔讀進記憶體」現在不成立 ——
+  // 新端點要求 multipart，Worker 就必須讀。留著那個斷言只會給人假的安全感。
 
   const call = async (url: string): Promise<string> => {
     try {
@@ -188,26 +193,36 @@ async function main() {
   };
 
   const bad = await call("https://example.invalid/nope.mp3");
-  ok("壞網址要回明確錯誤", bad.startsWith("轉錄失敗"), bad.slice(0, 76));
+  ok(
+    "壞網址要給能行動的訊息（不是 undici 的 fetch failed）",
+    bad.length > 0 && !/fetch failed/i.test(bad),
+    bad.slice(0, 76),
+  );
 
-  // 中轉的錯誤訊息必須原樣往外送 ——
-  // 「音檔超過 100 MB」對使用者有意義，換成「轉錄失敗」等於什麼都沒說。
+  // 上游錯誤必須原樣往外送。「音檔太大」對使用者有意義。
   const over = await call(
     "https://upload.wikimedia.org/wikipedia/commons/1/16/No_file.ogg",
   );
   ok(
-    "中轉的錯誤要原樣送出（不換成籠統訊息）",
+    "服務端錯誤要原樣送出（不換成籠統訊息）",
     over.includes("HTTP"),
     over.slice(0, 86),
   );
 
-  // 確認這條路徑不再把音檔載進來
+  // 端點與認證方式
   const src = readFileSync(new URL("../src/lib/podcast.ts", import.meta.url), "utf8");
+  ok("打的是 stt.twonline.dpdns.org", src.includes("stt.twonline.dpdns.org"));
+  ok('認證用 X-API-Key', /"X-API-Key"/.test(src));
   ok(
-    "不再把音檔讀進記憶體（arrayBuffer / Blob 都不該出現）",
-    !/arrayBuffer\(\)/.test(src) && !/new Blob\(/.test(src),
+    "不該還在送 audioUrl 的 JSON 模式（新端點不支援）",
+    !/body:\s*JSON\.stringify\(\{[\s\S]{0,80}audioUrl/.test(src),
   );
-  ok("送的是 audioUrl", /audioUrl,/.test(src) || /audioUrl\s*:/.test(src));
+  ok("用 multipart（不是 JSON）", /new FormData\(\)/.test(src));
+  // ★ 兩種限制來自不同地方，不能混為一談
+  ok(
+    "Worker 記憶體上限與服務端 96MB 要分開講",
+    /WORKER_AUDIO_MAX_BYTES/.test(src) && /不是轉錄服務/.test(src),
+  );
 
   console.log(`\n══ 結果: ${pass} 通過 / ${fail} 失敗 ══`);
   process.exit(fail ? 1 : 0);

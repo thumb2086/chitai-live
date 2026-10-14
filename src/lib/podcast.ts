@@ -31,10 +31,65 @@
 
 import { query as dbQuery, queryOne } from "@/lib/db-http";
 import { splitText } from "@/lib/rag";
+import { splitMp3 } from "@/lib/mp3-split";
 
 // ── 限制 ────────────────────────────────────────────────
-const ROUTER_URL =
-  process.env.GROQ_ROUTER_URL || "https://vercel-router-khaki.vercel.app";
+/**
+ * STT 服務網址（2026-10-14 換到獨立主機）。
+ *
+ * ★ 為什麼換
+ *   舊路徑是 chitai 上傳音檔給 groq-router（Vercel），
+ *   而 **Vercel 的請求體上限約 4.5 MB**（實測二分：4.0 過、4.5 拒）。
+ *   一般 Podcast 單集 8–80 MB，那條路幾乎每一集都失敗。
+ *   新主機是放在中轉前面的代理，自己回報 maxBytes = 96 MB。
+ *
+ * ★ 不要在這裡寫死
+ *   env 優先，預設值只是萬一沒設定時的後路。
+ */
+const STT_URL =
+  process.env.STT_URL ||
+  "https://stt.twonline.dpdns.org/v1/audio/transcriptions";
+
+/**
+ * 每段上傳的大小上限 —— **20 MB**。
+ *
+ * 數值來自參考實作（Playlist_Administrator 的 _defaultMaxFileSize），
+ * 不是自己挑的。STT 端 /health 自己回報 maxBytes = 96 MB，
+ * 所以 20 MB 是我們這邊較保守的選項，留了餘裕。
+ */
+export const CHUNK_MAX_BYTES = 20 * 1024 * 1024;
+
+/** 同時併發上傳幾段。對齊參考實作（它用真正的 worker pool，不是分批輪流）。 */
+export const TRANSCRIBE_CONCURRENCY = 4;
+
+/**
+ * 整個音檔的下載上限 —— **80 MB，這個數字來自 Worker 記憶體，不是 STT 服務。**
+ *
+ * ★ 為什麼還要一個總量上限
+ *   分段解決了「單次請求不能太大」，但沒解決「Worker 記憶體放不下整個檔」。
+ *   Workers 是 128 MB，而我們要同時持有原始音檔 + 一個分段。
+ *   20 MB 的分段 + 原始檔 → 原始檔必須 <= 約 90 MB 才安全。
+ *   取 80 MB，理由寫在這裡而不是散在程式碼裡。
+ *
+ * ★ ★ 這個 80 和 STT 服務回報的 96 MB 毫無關係 —— 別混為一談
+ *
+ *   兩個上限來自完全不同的東西，搞混會導致調錯參數：
+ *
+ *     80 MB  ← Cloudflare Workers 記憶體 128 MB，扣掉分段與暫存
+ *              問的是「我們的 Worker 能不能把整個檔讀進來」
+ *              STT 那邊就算給你 1 TB，這個數也不會變大
+ *
+ *     96 MB  ← 自架 STT 代理自己回報的 maxBytes（GET /health 查得到）
+ *              問的是「單次請求送過去，對方收不收得下」
+ *              Worker 就算有 10 GB 記憶體，這個數也不會變大
+ *
+ *   實際生效的是兩者取小。我們的 80 比它的 96 小，所以先卡在我們這邊。
+ *   真要放大單集上限，先量 Worker 記憶體，不是去調 STT 那邊。
+ *
+ *   （名字用 WORKER_ 而不是 TOTAL_，就是為了讓人一眼看出這 80 從哪來。
+ *    「total」會讓人以為那是音訊本身的容量，正好製造上面那個誤解。）
+ */
+export const WORKER_AUDIO_MAX_BYTES = 80 * 1024 * 1024;
 /** STT 模型。whisper-large-v3-turbo 比 large-v3 快很多，品質對逐字稿夠用。 */
 export const STT_MODEL = "whisper-large-v3-turbo";
 
@@ -398,66 +453,200 @@ export async function listEpisodes(
 // ── STT ────────────────────────────────────────────────
 
 /**
- * 把音檔轉成逐字稿（走我們自己的中轉）。
+ * 把音檔轉成逐字稿。
  *
- * ★ 只送網址，不送檔案
- *   中轉跑在 Vercel，請求體上限約 4.5 MB（實測：4.0 過、4.5 拒）。
- *   一般 Podcast 單集 8–80 MB，走檔案上傳一定失敗。
- *   { audioUrl } 的進站 body 只有幾百 bytes，音檔由中轉自己抓。
+ * ★ 走 multipart 上傳，不是送網址
+ *   2026-10-14 中間版本曾改成送 { audioUrl }，繞開 Vercel 4.5 MB 限制。
+ *   但換到新主機後實測：**新端點只收 multipart/***
+ *   （錯誤「multipart/* content type expected」），JSON 模式不受支援。
  *
- *   副作用（好的）：這個 Worker 不再需要在記憶體裡放整個音檔。
+ * ★ 認證用 X-API-Key
+ *   維護者的指定。實測 Authorization: Bearer 也收得到，
+ *   但照規格走 —— 兩種都work不代表該用兩種。
  */
-export async function transcribe(
-  audioUrl: string,
-  _unusedHintBytes?: number | null,
-): Promise<{ text: string; durationSec: number | null }> {
+export interface TranscribeResult {
+  text: string;
+  durationSec: number | null;
+  /** 分成幾段 */
+  chunks: number;
+  /**
+   * ★ 失敗的段。空陣列 = 全部成功。
+   *   這個欄位存在的理由在檔頭：靜默回傳「短一點的逐字稿」
+   *   會讓人以為內容本來就那麼短。
+   */
+  failed: { chunk: number; error: string }[];
+}
+
+export async function transcribe(audioUrl: string): Promise<TranscribeResult> {
   const key = process.env.GROQ_ROUTER_KEY;
   if (!key) throw new Error("GROQ_ROUTER_KEY 未設定");
 
-  const ac = new AbortController();
-  const tm = setTimeout(() => ac.abort(), 280_000);
-  let res: Response;
-  try {
-    res = await fetch(ROUTER_URL + "/v1/audio/transcriptions", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + key,
-        "Content-Type": "application/json",
-      },
-      signal: ac.signal,
-      body: JSON.stringify({
-        audioUrl,
-        model: STT_MODEL,
-        // ★ 語言可選：中文節目用 zh，英文用 en。
-        //   不指定就讓 STT 自己判斷 —— 猜錯的代價是整段變成另一種語言的音譯。
-        response_format: "json",
-      }),
-    });
-  } catch (e) {
-    clearTimeout(tm);
+  const bytes = await downloadAudio(audioUrl);
+  const parts = planChunks(bytes);
+
+  // ── 併發上傳（真正的 worker pool，對齊參考實作）──
+  //
+  // ★ 不用 Promise.all(map(...)) 的理由
+  //   那會一次開全部併發。48 分鐘的節目切成 3 段還好，
+  //   但 2 小時的切成 9 段就是 9 個同時上傳 → 上游 429 + Worker 記憶體爆。
+  //   參考實作踩過這個（註解寫「strided batching 第一批就全開 → 429 風暴」）。
+  const texts: string[] = new Array(parts.length).fill("");
+  const failed: { chunk: number; error: string }[] = [];
+  let next = 0;
+
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const i = next++;
+      if (i >= parts.length) return;
+      try {
+        texts[i] = await uploadChunk(parts[i], key);
+      } catch (e) {
+        failed.push({
+          chunk: i + 1,
+          error: String((e as Error).message || e).slice(0, 160),
+        });
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(TRANSCRIBE_CONCURRENCY, parts.length) }, worker),
+  );
+
+  // ── 全部失敗 → 拋真因 ──
+  const okCount = texts.filter((t) => t.trim().length > 0).length;
+  if (okCount === 0) {
     throw new Error(
-      String((e as Error).message || e).includes("abort")
-        ? `轉錄逾時（280 秒）。這一集可能太長。`
-        : `連不上轉錄服務：${String((e as Error).message || e)}`,
+      `全部 ${parts.length} 段都轉錄失敗：` +
+        failed.map((f) => `第 ${f.chunk} 段 ${f.error}`).join("；").slice(0, 400),
     );
   }
-  clearTimeout(tm);
+
+  // ── 部分失敗 → 照實回報，不假裝完整 ──
+  return {
+    // 用換行接，不用直接接 —— 否則兩段邊界會黏成一個詞。
+    text: texts.filter((t) => t.trim()).join("\n"),
+    durationSec: null,
+    chunks: parts.length,
+    failed,
+  };
+}
+
+/** 下載音檔，帶兩道上限檢查（見檔頭說明為什麼在讀之前就要看 Content-Length）。 */
+async function downloadAudio(audioUrl: string): Promise<Uint8Array> {
+  const ac = new AbortController();
+  const tm = setTimeout(() => ac.abort(), 280_000);
+  try {
+    const dl = await fetch(audioUrl, {
+      signal: ac.signal,
+      headers: { "User-Agent": "CHITAI/1.0 (+knowledge base importer)" },
+    });
+    if (!dl.ok) throw new Error(`下載音檔失敗 HTTP ${dl.status}`);
+
+    const declared = Number(dl.headers.get("content-length") || "0");
+    if (declared > WORKER_AUDIO_MAX_BYTES) {
+      throw new Error(
+        `這一集是 ${(declared / 1048576).toFixed(1)} MB，超過 ` +
+          `${(WORKER_AUDIO_MAX_BYTES / 1048576).toFixed(0)} MB 的上限` +
+          `（我們伺服器的記憶體，不是轉錄服務的容量）。`,
+      );
+    }
+
+    return new Uint8Array(await dl.arrayBuffer());
+  } catch (e) {
+    const msg = String((e as Error).message || e);
+    if (/^這一集是/.test(msg)) throw new Error(msg); // 已經是給使用者看的
+    // ★ 不要把 undici/Node 的原始錯誤往外送。
+    //   實測「下載壞網址」會回 "fetch failed" —— 使用者看到這個
+    //   完全不知道要檢查網址還是等一下再試。
+    if (/abort/i.test(msg)) {
+      throw new Error("下載音檔逾時（280 秒）。檔案可能在慢速的 CDN 上，或網址已失效。");
+    }
+    if (/fetch failed|ENOTFOUND|EAI_AGAIN|ECONN/i.test(msg)) {
+      throw new Error(
+        `連不到音檔伺服器（${audioUrl.split("?")[0].slice(0, 60)}…）。` +
+          `可能是網址失效或 DNS 查不到。`,
+      );
+    }
+    throw new Error(`下載音檔失敗：${msg.slice(0, 160)}`);
+  } finally {
+    clearTimeout(tm);
+  }
+}
+
+/**
+ * 決定怎麼切。
+ *
+ * ★ 不支援的格式要明確拒絕，不要硬切
+ *   m4a/mp4、ogg、opus 不能用位元組切 —— 硬切的表現是
+ *   「轉錄看起來像亂語」，而那比明確報錯糟得多
+ *   （使用者會以為內容本來就那樣）。
+ */
+function planChunks(bytes: Uint8Array): Uint8Array[] {
+  if (bytes.length <= CHUNK_MAX_BYTES) return [bytes];
+
+  const parts = splitMp3(bytes, CHUNK_MAX_BYTES);
+  if (!parts) {
+    const kind = bytes.length >= 4 ? Array.from(bytes.subarray(0, 4)).map((b) => b.toString(16).padStart(2, "0")).join(" ") : "?";
+    throw new Error(
+      `這一集是 ${(bytes.length / 1048576).toFixed(1)} MB，超過 ` +
+        `${(CHUNK_MAX_BYTES / 1048576).toFixed(0)} MB，需要分段。` +
+        `但我們只能切 MP3（檔頭 ${kind}）—— ` +
+        `m4a/ogg/opus 硬切會產生亂語，那比不支援更糟。` +
+        `請選 MP3 版的音檔，或這一集先用其他方式處理。`,
+    );
+  }
+  return parts;
+}
+
+/** 送一段音檔給 STT，回逐字稿。 */
+async function uploadChunk(part: Uint8Array, key: string): Promise<string> {
+  const form = new FormData();
+  form.append("model", STT_MODEL);
+  form.append("response_format", "json");
+  // ★ 不指定 language：中文用 zh、英文用 en、中間 podcast 也有，
+  //   猜錯的代價是整段變成另一種語言的音譯，
+  //   而那看起來會像「轉錄品質差」而不是「猜錯了」。
+  // ★ 這個 cast 只為了過 TS 的 BlobPart 型別。
+  //   新版 lib.dom 的 BlobPart 要 ArrayBufferView<ArrayBuffer>，
+  //   而 splitMp3 的 subarray 回傳型別是 ArrayBufferLike（可能不是 ArrayBuffer）。
+  //   執行期完全一樣 —— Blob 只讀取位元組，不在意背後是哪種 ArrayBuffer。
+  //   （用「複製一份成新 ArrayBuffer」來避開會多佔一倍記憶體，
+  //     而我們的限制本來就是記憶體 —— 那個修法比型別問題更糟。）
+  form.append("file", new Blob([part as unknown as BlobPart], { type: "audio/mpeg" }), "audio.mp3");
+
+  const res = await fetch(STT_URL, {
+    method: "POST",
+    headers: { "X-API-Key": key },
+    body: form,
+  });
 
   if (!res.ok) {
-    // ★ 中轉的錯誤訊息原樣往外送。
-    //   「音檔超過 100 MB」「下載失敗 404」「沒有可用的上游金鑰」
-    //   這些對使用者都有意義，換成一句「轉錄失敗」等於什麼都沒說。
     const detail = await res.text().catch(() => "");
-    let msg = detail.slice(0, 300);
+    let msg = detail.slice(0, 200);
     try {
       const j = JSON.parse(detail);
       msg = j?.error?.message || msg;
     } catch {}
-    throw new Error(`轉錄失敗（HTTP ${res.status}）：${msg}`);
+    // ★ 保留 HTTP 狀態碼 —— 上游 413（段太大）與 401（憑證錯）
+    //   是完全不同的問題，籠統的「轉錄失敗」會讓人查錯方向。
+    throw new Error(`HTTP ${res.status} ${msg}`);
   }
 
-  const j = (await res.json()) as { text?: string; duration?: number };
-  return { text: String(j.text || ""), durationSec: j.duration ?? null };
+  const j = (await res.json()) as { text?: string };
+  return String(j.text || "");
+}
+
+/** 猜副檔名。上游看的是副檔名與 content-type。 */
+function guessExt(url: string, mimeType: string): string {
+  const m = url.split("?")[0].match(/\.([a-z0-9]{2,5})$/i);
+  const ok = ["mp3", "m4a", "mp4", "wav", "ogg", "opus", "aac", "flac", "webm", "mpeg", "mpga"];
+  if (m && ok.includes(m[1].toLowerCase())) return "." + m[1].toLowerCase();
+  if (mimeType.includes("mp4")) return ".m4a";
+  if (mimeType.includes("ogg")) return ".ogg";
+  if (mimeType.includes("wav")) return ".wav";
+  if (mimeType.includes("flac")) return ".flac";
+  if (mimeType.includes("webm")) return ".webm";
+  return ".mp3";
 }
 
 // ── 逐字稿 → 知識庫 ─────────────────────────────────────
@@ -589,8 +778,7 @@ export async function ingestEpisode(
   );
 
   try {
-    const bytes = ep.audioBytes ? Number(ep.audioBytes) : null;
-    const { text, durationSec } = await transcribe(ep.audioUrl, bytes);
+    const { text, durationSec } = await transcribe(ep.audioUrl);
 
     if (!text.trim()) throw new Error("轉錄結果是空的");
 
