@@ -83,7 +83,7 @@ type WalletState =
   | { state: "loading" }
   | { state: "disconnected" }
   | { state: "error" }
-  | { state: "ok"; zxc: number; yjc: number };
+  | { state: "ok"; zxc: number | null; yjc: number | null };
 
 const [user, setUser] = useState<{
     name?: string;
@@ -111,13 +111,20 @@ const [user, setUser] = useState<{
       .then((r) => (r.ok ? r.json() : null))
       .then((w) => {
         if (!w) return;
-        if (w.connected === false || !w.summary?.balances) {
+        if (w.connected === false) {
           setWallet({ state: "disconnected" });
           return;
         }
-        const zxc = Number(w.summary.balances.ZXC ?? 0);
-        const yjc = Number(w.summary.balances.YJC ?? 0);
-        setWallet({ state: "ok", zxc, yjc });
+        // ★ balances 現在明確是 null，不是 0。
+        //   「OAuth token 查不到餘額」和「餘額是 0」是兩件事 ——
+        //   顯示 0 會讓人以為錢包是空的、錢不見了。
+        //   要真的顯示餘額，得先在 zixi-earth 加一個接受 oat_ 的餘額端點。
+        const b = w.balances;
+        if (!b) {
+          setWallet({ state: "ok", zxc: null, yjc: null });
+          return;
+        }
+        setWallet({ state: "ok", zxc: Number(b.ZXC ?? 0), yjc: Number(b.YJC ?? 0) });
       })
       .catch(() => setWallet({ state: "error" }));
   }, []);
@@ -228,9 +235,19 @@ const [user, setUser] = useState<{
             <span>子熙幣餘額</span>
             <span>
               {wallet.state === "ok" ? (
-                <strong>
-                  ZXC {wallet.zxc.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                </strong>
+                wallet.zxc === null ? (
+                  /* 已連線，但餘額查不到 —— 明確說「查不到」而不是顯示 0 */
+                  <strong title="OAuth token 沒有餘額查詢權限">
+                    <Link href="/dashboard/zixi" data-link=""
+                      style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                      已連線 ›
+                    </Link>
+                  </strong>
+                ) : (
+                  <strong>
+                    ZXC {wallet.zxc.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </strong>
+                )
               ) : wallet.state === "loading" ? (
                 <strong>—</strong>
               ) : wallet.state === "disconnected" ? (
@@ -255,7 +272,7 @@ const [user, setUser] = useState<{
               )}
             </span>
           </span>
-          {wallet.state === "ok" && wallet.yjc > 0 && (
+          {wallet.state === "ok" && wallet.yjc !== null && wallet.yjc > 0 && (
             <small className="member-expiry">
               YJC {wallet.yjc.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </small>

@@ -3,6 +3,21 @@ import { NextResponse } from "next/server";
 // 2026-10-06：從 Prisma 改成 Neon HTTP（Workers 相容）。
 import { queryOne } from "@/lib/db-http";
 import { getOrCreateUser, getSessionId, unauthorized } from "@/lib/getUser";
+// ★ 這個檔案是唯一還留著死掉 fallback 的地方（2026-10-14 修）。
+//   原本是：
+//     const ZIXI_API = process.env.ZIXI_API_URL || "https://zixi-casino-api.onrender.com/api/v1";
+//   而 onrender 那台實測是 20 秒逾時。
+//
+//   ★ 而 zixi-endpoints.ts 的檔頭早就把這個坑寫下來了：
+//     「真正的问题不是『网址旧了』，是『旧网址是 fallback』」
+//     「设定错误被转换成了功能正常但结果为空」
+//
+//   但那個檔案只遷移了 callback，漏了 proxy。
+//   後果：wallet-summary 一直 500，前端顯示「餘額查詢失敗」——
+//   症狀看起來像「功能沒接好」，實際上是打到一个死掉的 host。
+//
+//   現在統一走單一來源，與 callback 一致。
+import { zixiApiBase } from "@/lib/zixi-endpoints";
 
 /**
  * ZIXI custody proxy.
@@ -25,7 +40,7 @@ import { getOrCreateUser, getSessionId, unauthorized } from "@/lib/getUser";
  * is what the UI should render.
  */
 
-const ZIXI_API = process.env.ZIXI_API_URL || "https://zixi-casino-api.onrender.com/api/v1";
+const ZIXI_API = zixiApiBase();
 
 const timingSafeEqual = (a: string, b: string) =>
   a.length === b.length && timingSafeEqualBuf(Buffer.from(a), Buffer.from(b));
@@ -92,11 +107,52 @@ export async function POST(req: Request) {
           error: "尚未連線或連線已過期，請重新連線 ZIXI",
         });
       }
-      const res = await fetch(`${ZIXI_API}${action === "me" ? "/auth/me" : "/wallet/summary"}`, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      // ★ 2026-10-14：這裡打的端點全部邪，實測結果：
+      //   /api/v1/wallet/summary → 404
+      //     （那條路徑在 zixi-earth 只存在於 dlinker.js，
+      //      硬體錢包的相容層）
+      //   /api/v1/auth/me → 401
+      //     （它是給 session JWT 用的，而我們手上是 OAuth token）
+      //
+      //   OAuth token（zixi_oat_）唯一能用的是
+      //     /api/oauth/userinfo
+      //   見 zixi-earth/src/oauth.js：「GET /api/oauth/userinfo (Bearer oat_)」
+      //   寫法比照 src/lib/zixi-payments.ts 那個（它本來就是對的）。
+      //
+      // ★ 但它**不回傳餘額**：只有 sub / username / wallet_address / role。
+      //   餘額需要 session JWT，是另一套登入流程。
+      //
+      //   所以這裡不假装有餘額：回可以求到的部分，
+      //   balances 明確給 null 使前端知道「查不到」而不是「是 0」。
+      const BT = String.fromCharCode(96);
+      const res = await fetch(ZIXI_API + "/api/oauth/userinfo", {
+        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       });
+      if (!res.ok) {
+        return NextResponse.json({
+          success: false,
+          connected: false,
+          error: "ZIXI 回應 " + res.status,
+        }, { status: res.status });
+      }
       const data = await res.json();
-      return NextResponse.json({ ...data, connected: true });
+      if (data?.error) {
+        return NextResponse.json({
+          success: false,
+          connected: false,
+          error: String(data.error),
+        }, { status: 401 });
+      }
+      return NextResponse.json({
+        success: true,
+        connected: true,
+        sub: data?.sub || "",
+        username: data?.username || "",
+        address: data?.wallet_address || "",
+        role: data?.role || "",
+        balances: null,
+        balanceNote: "OAuth token 無法查餘額；需要 zixi-earth 提供餘額端點",
+      });
     }
 
     if (action === "admin-transfer") {

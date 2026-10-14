@@ -1,11 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Wallet, ExternalLink, Check, Link2, Unlink, LogIn } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/toast/Toast";
 
 export default function ZixiPage() {
+  // ★ callback 跳過來時網址帶 ?success=connected 或 ?error=xxx，
+  //   而這頁原本**完全沒讀** —— 所以即使授權成功也沒有任何提示，
+  //   使用者只會看到跟剛才一樣的畫面，無法分辨成不成功。
+  //
+  //   用法比照 dashboard/connections（useSearchParams 必須包在 Suspense 裡，
+  //   否則整頁在靜態輸出時會去讀 request 而失敗）。
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-[var(--ic-ink-muted)]">載入中...</div>}>
+      <ZixiInner />
+    </Suspense>
+  );
+}
+
+function ZixiInner() {
+  const searchParams = useSearchParams();
   const [wallet, setWallet] = useState("");
   const [zixiConnected, setZixiConnected] = useState(false);
   const [zixiAddress, setZixiAddress] = useState("");
@@ -14,10 +30,46 @@ export default function ZixiPage() {
   const [saving, setSaving] = useState(false);
   const { show } = useToast();
 
+  // ★ 把 callback 的結果講出來。
+  //   錯誤訊息要寫「這是什麼」而不是代碼 ——
+  //   使用者看到 error=not_logged_in 只會更困惑。
+  const cbError = searchParams.get("error");
+  const cbSuccess = searchParams.get("success");
+  const [cbNotice, setCbNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (cbError) {
+      const map: Record<string, string> = {
+        not_logged_in: "你連線 ZIXI 時沒有登入熾台，請先回到控制台登入再試一次。",
+        session_not_found: "找不到你的登入階段，請重新登入熾台。",
+        missing_client_secret: "伺服器沒有設定 ZIXI 應用程式金鑰，請聯絡管理員。",
+        no_code: "ZIXI 沒有回傳授權碼，授權可能已被取消。",
+        token_exchange_failed: "ZIXI 拒絕了這次授權，請確認應用程式狀態是否正常。",
+        callback_failed: "串接時發生錯誤，請稍後再試。",
+      };
+      setCbNotice(map[cbError] || `串接失敗（${cbError}）`);
+    } else if (cbSuccess === "connected") {
+      setCbNotice("已成功連線 ZIXI 帳戶。");
+    }
+  }, [cbError, cbSuccess]);
+
   useEffect(() => {
     api.getUser().then(u => {
       setWallet(u.zixiWallet || "");
-      if (u.zixiAccessToken) {
+      // ★ 這裡原本是 `if (u.zixiAccessToken)`。
+      //   而 /api/v1/user **刻意不回傳** zixiAccessToken ——
+      //   那是活的三方 OAuth bearer，送到瀏覽器等於憑證外洩。
+      //   該路由改回傳衍生布林值 zixiConnected：
+      //     zixiConnected: Boolean(u.zixiAccessToken) && (!expires || expires > new Date())
+      //
+      //   但這裡沒跟著改，於是讀一個永遠是 undefined 的欄位，結果
+      //   **授權成功、token 也確實存進資料庫了，畫面卻一直顯示「尚未連線」**。
+      //   2026-10-14 實測：DB 裡 zixiAccessToken 有值（zixi_oat_96d…）、
+      //   到期日一個月後，而前端說沒連線。
+      //
+      //   ★ 安全修正與前端要一起改。只改一邊會產生這種
+      //     「後端成功但使用者看到失敗」的症狀 —— 而且方向相反：
+      //     看起來像壞了，實際上資料都是對的。
+      if (u.zixiConnected) {
         setZixiConnected(true);
         api.zixiProxy({ action: "me" }).then((res: any) => {
           if (res.success && res.data?.data) {
@@ -39,6 +91,20 @@ export default function ZixiPage() {
 
   return (
     <div className="max-w-[1080px]">
+      {/* ★ callback 的結果。沒有這一條的話，使用者按完授權回來
+          看到的是一模一樣的畫面，無法分辨到底成不成功。*/}
+      {cbNotice && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mb-4 rounded-[var(--ic-radius-md)] border p-3 text-[13px] leading-[1.7]"
+          style={cbError
+            ? { borderColor: "rgba(220,38,38,.3)", background: "rgba(220,38,38,.06)", color: "#b91c1c" }
+            : { borderColor: "rgba(11,167,124,.3)", background: "rgba(11,167,124,.07)", color: "#075e28" }}
+        >
+          {cbNotice}
+        </div>
+      )}
       <div className="mb-4 text-[13px] text-[var(--ic-ink-subtle)]">
         <a href="/dashboard" className="text-[var(--ic-primary)] no-underline">控制中心</a>
         <span className="mx-2 text-[var(--ic-ink-muted)]">/</span>
