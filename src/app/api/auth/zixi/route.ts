@@ -18,5 +18,23 @@ export async function GET(req: NextRequest) {
     scope: "profile",
   });
 
-  return NextResponse.redirect(`${ZIXI_OAUTH_URL}/oauth/consent?${qs.toString()}`);
+  // ★ ★ 這裡原本是 `/oauth/consent?${qs}`，**兩個地方都錯**（2026-10-14 修正）：
+  //
+  //   ① 路徑：zixi-earth 認得的是 `#/oauth`，不是 `/oauth/consent`
+  //   ② 參數位置：它的 OAuthConsentPage 讀 `location.hash`，
+  //      參數必須在 **hash 裡面**，不是 query string
+  //
+  // zixi-earth 是純 hash 路由（client-react/src/App.jsx）：
+  //     const onHash = () => { setPage(location.hash.slice(1) || '/'); };
+  //
+  // 送 `/oauth/consent?client_id=...` 時 hash 是空的 → page = '/' → 賭場首頁。
+  // 症狀就是「點授權跳過去就停在賭場、回不來」——
+  // 使用者看到一個沒有在授權的頁面，以為流程壞了。
+  //
+  // ★ 這不是「同意頁沒實作」。zixi-earth 的 OAuthConsentPage 一直都存在，
+  //   而且連「未登入」都有處理（info.needsLogin 分支）。
+  //   我一開始以為缺頁面，還寫了一個新的 consent 元件 —— 那是多餘的，
+  //   而且寫進了 client/（不是建置用的 client-react/），等於什麼都沒修到。
+  //   正確的修法就是這一行。
+  return NextResponse.redirect(`${ZIXI_OAUTH_URL}/#/oauth?${qs.toString()}`);
 }
