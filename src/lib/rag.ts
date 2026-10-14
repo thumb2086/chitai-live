@@ -612,6 +612,117 @@ export async function ragAnswer(
   };
 }
 
+/**
+ * 把一段任意文字（Podcast 逐字稿、YouTube 逐字稿、手動貼上）
+ * 切塊、嵌入、寫進知識庫。
+ *
+ * ★ 為什麼要這個泛用入口
+ *   三種來源（caption / podcast / youtube）的差別只有
+ *   source_type、source_id 與 metadata 裡的欄位 ——
+ *   切塊、嵌入、寫入這三步**完全一樣**。
+ *   各寫一份就是三份會各自漂移（切法改了只改到其中一份）。
+ *
+ * 回傳寫入的 chunk 數。
+ */
+export async function syncTranscriptChunks(opts: {
+  sourceType: "podcast" | "youtube" | "manual";
+  sourceId: string;
+  sourceRef?: string | null;
+  text: string;
+  metadata?: Record<string, unknown>;
+  /** 切塊目標長度（字）。逐字稿預設比字幕長。 */
+  targetLen?: number;
+}): Promise<number> {
+  const {
+    sourceType,
+    sourceId,
+    sourceRef = null,
+    text,
+    metadata = {},
+    targetLen = 220,
+  } = opts;
+
+  await ensureVectorSchema();
+
+  // 前綴讓不同來源的 id 不會互相蓋掉
+  // （兩邊都可能有 "ep-1" 這種 id）。
+  const prefix = { podcast: "pod", youtube: "yt", manual: "man" }[sourceType];
+  const pieces = splitText(text, targetLen);
+
+  if (!pieces.length) return 0;
+
+  const chunks: KnowledgeChunk[] = pieces.map((p, i) => ({
+    id: `${prefix}-${sourceId}-${i}`,
+    sourceType,
+    sourceId,
+    sourceRef,
+    text: p,
+    metadata: { ...metadata, chunkIndex: i, chunkCount: pieces.length },
+    createdAt: new Date(),
+  }));
+
+  const embeddings = await embedTexts(
+    chunks.map((c) => c.text),
+    "passage",
+  );
+  return upsertChunks(chunks, embeddings);
+}
+
+/**
+ * 按句切塊，併到接近目標長度。
+ *
+ * ★ 為什麼要併
+ *   Podcast 逐字稿常是一整段沒有標點的長字串。
+ *   切太細 → 檢索失焦（半句話沒有語意）
+ *   切太粗 → 引用變成一大段沒有上下文的東西
+ *   所以合併到接近 targetLen 再斷。
+ */
+export function splitText(text: string, targetLen = 220): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+
+  const sentences = clean
+    .split(/(?<=[。！？!?])|(?<=\.)|\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const out: string[] = [];
+  let buf = "";
+
+  const flush = () => {
+    if (buf.trim().length > 4) out.push(buf.trim());
+    buf = "";
+  };
+
+  for (const s of sentences) {
+    // 單句就超標 → 依標點再切一次，切不出來才硬切。
+    if (s.length > targetLen * 1.8) {
+      flush();
+      let rest = s;
+      while (rest.length > targetLen * 1.8) {
+        const head = rest.slice(0, Math.floor(targetLen * 1.6));
+        const cut = Math.max(
+          head.lastIndexOf("，"), head.lastIndexOf(","),
+          head.lastIndexOf("、"), head.lastIndexOf(" "),
+        );
+        const at = cut > targetLen * 0.4 ? cut + 1 : Math.floor(targetLen * 1.6);
+        out.push(rest.slice(0, at).trim());
+        rest = rest.slice(at);
+      }
+      buf = rest;
+      continue;
+    }
+    if (!buf) buf = s;
+    else if (buf.length + s.length <= targetLen) buf += s;
+    else {
+      flush();
+      buf = s;
+    }
+  }
+  flush();
+  return out;
+}
+
 /** 知識庫概況（給頁面顯示用）。 */
 export async function knowledgeStats() {
   await ensureVectorSchema();

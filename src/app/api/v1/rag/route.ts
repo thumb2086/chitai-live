@@ -45,9 +45,39 @@ export async function GET(req: Request) {
   try {
     const user = await getOrCreateUser(getSessionId(req));
     if (!user) return unauthorized();
-    return NextResponse.json({ ok: true, ...(await knowledgeStats()) });
+
+    // ★ 依 action 分派，不要讓「統計」默默吃掉所有 GET。
+    //
+    //   2026-10-14 踩到：GET /api/v1/rag?action=feeds
+    //   回傳的是字幕統計 —— 因為原本 GET 只有統計一支，
+    //   action 參數被**靜默忽略**。
+    //
+    //   那是最難查的一種 bug：端點回 200、body 形狀也合法，
+    //   只是內容完全不是呼叫方要的。
+    //   （AGENTS.md：症狀出現在離根因很遠的地方。）
+    const action = new URL(req.url).searchParams.get("action") || "";
+
+    if (action === "feeds") {
+      const { listFeeds } = await import("@/lib/podcast");
+      return NextResponse.json({ ok: true, feeds: await listFeeds(user.id) });
+    }
+
+    if (action === "episodes") {
+      const feedId = new URL(req.url).searchParams.get("feedId") || "";
+      if (!feedId) {
+        return NextResponse.json({ error: "需要 feedId" }, { status: 400 });
+      }
+      const { listEpisodes } = await import("@/lib/podcast");
+      return NextResponse.json({ ok: true, episodes: await listEpisodes(user.id, feedId) });
+    }
+
+    if (action === "" || action === "stats") {
+      return NextResponse.json({ ok: true, ...(await knowledgeStats()) });
+    }
+
+    return NextResponse.json({ error: "未知的 action" }, { status: 400 });
   } catch (e) {
-    return fail(e, "stats");
+    return fail(e, "get");
   }
 }
 
@@ -84,5 +114,59 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "未知的 action" }, { status: 400 });
   } catch (e) {
     return fail(e, "post");
+  }
+}
+
+/**
+ * Podcast 來源的寫入動作。與 GET 分開是因為慢。
+ *
+ * ★ 為什麼不用 POST
+ *   POST 已經被知識庫的 index/search/ask 佔用，
+ *   再塞 podcast-* 進去會讓一個 handler 裡混兩種生命週期
+ *   （查詢是毫秒級、轉錄是數十秒級）。
+ *   分開之後要改成分配佇列時，改動只落在這裡。
+ */
+export async function PATCH(req: Request) {
+  try {
+    const user = await getOrCreateUser(getSessionId(req));
+    if (!user) return unauthorized();
+
+    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    const action = String(body.action || "");
+    const { subscribeFeed, ingestEpisode } = await import("@/lib/podcast");
+
+    if (action === "podcast-subscribe") {
+      const feedUrl = String(body.feedUrl || "").trim();
+      if (!feedUrl) {
+        return NextResponse.json({ error: "請貼上 RSS 網址" }, { status: 400 });
+      }
+      if (!/^https?:\/\//i.test(feedUrl)) {
+        return NextResponse.json(
+          { error: "網址必須以 http:// 或 https:// 開頭" },
+          { status: 400 },
+        );
+      }
+      const r = await subscribeFeed(user.id, feedUrl);
+      return NextResponse.json({ ok: true, ...r });
+    }
+
+    if (action === "podcast-ingest") {
+      const guid = String(body.guid || "").trim();
+      if (!guid) {
+        return NextResponse.json({ error: "需要 guid" }, { status: 400 });
+      }
+      const r = await ingestEpisode(user.id, guid);
+      return NextResponse.json({ ok: true, ...r });
+    }
+
+    return NextResponse.json({ error: "未知的 action" }, { status: 400 });
+  } catch (e) {
+    // ★ 這裡把錯誤訊息原樣回給使用者 —— 跟上面不一樣，而且是刻意的。
+    //   ingest 的失敗都是使用者能自己處理的
+    //   （音檔太大、集數選錯、feed 掛了），
+    //   「知識庫操作失敗」這種訊息對他毫無幫助。
+    const msg = String((e as Error).message || e);
+    console.error("podcast PATCH:", msg);
+    return NextResponse.json({ error: msg.slice(0, 300) }, { status: 400 });
   }
 }

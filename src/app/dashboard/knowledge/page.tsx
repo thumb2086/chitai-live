@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Library, Search, RefreshCw, MessageSquare, Database,
   Loader2, AlertTriangle, CheckCircle2, Sparkles,
+  Podcast, Plus, ChevronRight,
 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -70,6 +71,49 @@ export default function KnowledgePage() {
 
   const [err, setErr] = useState("");
 
+  // ── Podcast ──
+  type Feed = {
+    id: string; title: string; author: string;
+    episodeCount: number; indexedCount: number;
+  };
+  type Ep = {
+    guid: string; title: string; durationSec: number | null;
+    status: string; error: string | null; segments: number;
+  };
+
+  const [feeds, setFeeds] = useState<Feed[]>([]);
+  const [loadingFeeds, setLoadingFeeds] = useState(true);
+  const [feedUrl, setFeedUrl] = useState("");
+  const [subscribing, setSubscribing] = useState(false);
+  const [openFeed, setOpenFeed] = useState<string | null>(null);
+  const [episodes, setEpisodes] = useState<Ep[]>([]);
+  const [loadingEps, setLoadingEps] = useState(false);
+  const [ingesting, setIngesting] = useState<string | null>(null);
+
+  const loadFeeds = async () => {
+    setLoadingFeeds(true);
+    try {
+      const r = await api.ragFeeds();
+      setFeeds(r.feeds || []);
+    } catch (e) {
+      setErr(`讀取 Podcast 訂閱失敗：${(e as Error).message}`);
+    } finally {
+      setLoadingFeeds(false);
+    }
+  };
+
+  const loadEpisodes = async (feedId: string) => {
+    setLoadingEps(true);
+    try {
+      const r = await api.ragEpisodes(feedId);
+      setEpisodes(r.episodes || []);
+    } catch (e) {
+      setErr(`讀取集數失敗：${(e as Error).message}`);
+    } finally {
+      setLoadingEps(false);
+    }
+  };
+
   const loadStats = async () => {
     setLoadingStats(true);
     try {
@@ -83,8 +127,58 @@ export default function KnowledgePage() {
 
   useEffect(() => {
     loadStats();
+    loadFeeds();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const doSubscribe = async () => {
+    if (!feedUrl.trim()) return;
+    setSubscribing(true);
+    setErr("");
+    try {
+      const r = await api.ragSubscribe(feedUrl.trim());
+      setFeedUrl("");
+      await loadFeeds();
+      if (r.truncatedFrom) {
+        // ★ 誠實說明：只收了最近 200 集。
+        //   不講的話使用者會以為整個節目都在裡面。
+        setErr(
+          `已加入 ${r.added} 集。這個節目的 feed 有 ${r.truncatedFrom} 集，` +
+            `只匯入最近 ${r.added} 集 —— 更早的不在選單裡（知識庫查的是「近期講過什麼」）。`,
+        );
+      }
+    } catch (e) {
+      setErr(`加入失敗：${(e as Error).message}`);
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
+  const toggleFeed = (feedId: string) => {
+    if (openFeed === feedId) {
+      setOpenFeed(null);
+      return;
+    }
+    setOpenFeed(feedId);
+    loadEpisodes(feedId);
+  };
+
+  const doIngest = async (guid: string) => {
+    setIngesting(guid);
+    setErr("");
+    try {
+      const r = await api.ragIngest(guid);
+      if (openFeed) await loadEpisodes(openFeed);
+      await loadStats();
+      await loadFeeds();
+      void r;
+    } catch (e) {
+      setErr(`轉錄失敗：${(e as Error).message}`);
+      if (openFeed) await loadEpisodes(openFeed);
+    } finally {
+      setIngesting(null);
+    }
+  };
 
   const doIndex = async () => {
     setIndexing(true);
@@ -237,6 +331,157 @@ export default function KnowledgePage() {
             字幕要直播時產生並完成才會進來 —— 沒有字幕可以索引，不是壞掉。
           </div>
         )}
+      </section>
+
+      {/* ── Podcast 來源 ──
+           ★ 放在這裡而不是獨立頁面：來源只是同一個知識庫的入口，
+             索引狀態、檢索、問答都是共用的。
+             拆成獨立頁只會讓人搞不清楚「我索引的東西要去哪裡找」。*/}
+      <section
+        style={{
+          border: "1px solid var(--ic-hairline)", borderRadius: 14,
+          padding: 20, marginBottom: 22, background: "var(--ic-surface-1)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <Podcast size={16} style={{ color: "#a78bfa" }} />
+          <span style={{ fontSize: 14, fontWeight: 700 }}>Podcast 節目</span>
+          {loadingFeeds ? (
+            <span style={{ fontSize: 12, color: "var(--ic-ink-muted)" }}>讀取中…</span>
+          ) : feeds.length > 0 ? (
+            <span style={{ fontSize: 12, color: "var(--ic-ink-muted)" }}>
+              已訂閱 {feeds.length} 個節目
+            </span>
+          ) : null}
+        </div>
+
+        <p style={{ fontSize: 12, lineHeight: 1.75, color: "var(--ic-ink-muted)", marginBottom: 14 }}>
+          貼 RSS 網址就能把節目加進來。轉錄與索引會走我們的轉錄服務，
+          <b>每一集都要單獨按「轉錄」才會處理</b> —— 不會自動跑完整個節目。
+        </p>
+
+        {/* 新增訂閱 */}
+        <div style={{ display: "flex", gap: 8, marginBottom: feeds.length ? 18 : 0 }}>
+          <input
+            value={feedUrl}
+            onChange={(e) => setFeedUrl(e.target.value)}
+            placeholder="https://…/rss.xml"
+            aria-label="Podcast RSS 網址"
+            style={{
+              flex: 1, padding: "9px 12px", borderRadius: 8, fontSize: 13,
+              border: "1px solid var(--ic-hairline-strong)",
+              background: "var(--ic-surface-2)", color: "var(--ic-ink)", outline: "none",
+            }}
+          />
+          <button
+            onClick={doSubscribe}
+            disabled={subscribing || !feedUrl.trim()}
+            style={{
+              padding: "0 15px", borderRadius: 8, fontSize: 13, fontWeight: 650,
+              cursor: subscribing ? "wait" : "pointer",
+              border: "1px solid var(--ic-hairline-strong)",
+              background: "transparent", color: "var(--ic-ink)",
+              opacity: subscribing || !feedUrl.trim() ? 0.5 : 1,
+            }}
+          >
+            {subscribing ? <Loader2 size={14} className="spin" /> : <Plus size={14} />}
+            {subscribing ? "抓取中…" : "加入"}
+          </button>
+        </div>
+
+        {/* 已訂閱的節目 */}
+        {feeds.map((f) => (
+          <div
+            key={f.id}
+            style={{ borderTop: "1px solid var(--ic-hairline-tertiary)", paddingTop: 14, marginTop: 4 }}
+          >
+            <button
+              onClick={() => toggleFeed(f.id)}
+              style={{
+                display: "flex", alignItems: "center", gap: 8, width: "100%",
+                background: "none", border: "none", padding: 0, cursor: "pointer",
+                textAlign: "left", color: "inherit",
+              }}
+            >
+              <ChevronRight
+                size={14}
+                style={{
+                  color: "var(--ic-ink-muted)",
+                  transform: openFeed === f.id ? "rotate(90deg)" : "none",
+                  transition: "transform .15s",
+                }}
+              />
+              <span style={{ fontSize: 14, fontWeight: 650, flex: 1 }}>{f.title}</span>
+              <span style={{ fontSize: 11, color: "var(--ic-ink-muted)" }}>
+                {f.indexedCount} / {f.episodeCount} 集已索引
+              </span>
+            </button>
+
+            {openFeed === f.id && (
+              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+                {loadingEps ? (
+                  <div style={{ fontSize: 12, color: "var(--ic-ink-muted)", padding: "8px 0" }}>
+                    讀取集數…
+                  </div>
+                ) : episodes.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "var(--ic-ink-muted)", padding: "8px 0" }}>
+                    這個節目的 feed 裡沒有可轉錄的集數。
+                  </div>
+                ) : (
+                  episodes.slice(0, 40).map((e) => (
+                    <div
+                      key={e.guid}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "8px 10px", borderRadius: 8,
+                        background: "var(--ic-surface-2)",
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, lineHeight: 1.4 }}>
+                          {e.title.slice(0, 70)}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--ic-ink-muted)", marginTop: 2 }}>
+                          {e.durationSec ? Math.round(e.durationSec / 60) + " 分鐘" : "長度未知"}
+                          {" · "}
+                          {e.status === "indexed" && <>已索引 {e.segments} 片段</>}
+                          {e.status === "failed" && (
+                            <span style={{ color: "#dc2626" }}>
+                              失敗：{String(e.error || "").slice(0, 60)}
+                            </span>
+                          )}
+                          {(e.status === "pending" || e.status === "running") && "尚未轉錄"}
+                        </div>
+                      </div>
+                      {e.status === "pending" && (
+                        <button
+                          onClick={() => doIngest(e.guid)}
+                          disabled={ingesting === e.guid}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 5,
+                            padding: "5px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600,
+                            border: "1px solid var(--ic-hairline-strong)",
+                            background: "transparent", color: "var(--ic-ink)",
+                            cursor: ingesting === e.guid ? "wait" : "pointer",
+                            opacity: ingesting === e.guid ? 0.6 : 1,
+                          }}
+                        >
+                          {ingesting === e.guid ? <Loader2 size={12} className="spin" /> : null}
+                          {ingesting === e.guid ? "轉錄中…" : "轉錄"}
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+                {episodes.length > 40 && (
+                  <div style={{ fontSize: 11, color: "var(--ic-ink-muted)", paddingTop: 4 }}>
+                    只顯示最近 40 集（共 {episodes.length} 集）
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
       </section>
 
       {/* ── 搜尋框 ── */}

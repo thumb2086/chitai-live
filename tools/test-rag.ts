@@ -65,7 +65,8 @@ async function main() {
   console.log(`\n══ RAG 端到端測試 ══`);
   console.log(`  載入環境變數: ${loaded} 個`);
   console.log(`  DATABASE_URL: ${process.env.DATABASE_URL ? "有" : "★ 沒有"}`);
-  console.log(`  NIM_API_KEY:   ${process.env.NIM_API_KEY ? "有" : "★ 沒有"}`);
+  // ★ 嵌入走中轉，不再需要 NIM_API_KEY（2026-10-14 已從 .env 移除）
+  console.log(`  嵌入來源:     groq-router /v1/embeddings（不直連 NVIDIA）`);
   console.log(`  ROUTER_KEY:   ${process.env.GROQ_ROUTER_KEY ? "有" : "★ 沒有"}`);
 
   // 動態匯入：必須在 env 載入之後，否則 db-http 會讀到空的 DATABASE_URL

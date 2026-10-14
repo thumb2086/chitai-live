@@ -101,4 +101,31 @@ export const api = {
       sources: { id: string; sourceType: string; sourceId: string; text: string; similarity: number }[];
       usage?: { promptTokens: number; completionTokens: number };
     }>("/rag", { method: "POST", body: JSON.stringify({ action: "ask", question, topK }) }),
+
+    // ── Podcast 來源 ──
+    //
+    // ★ 走 PATCH 而非 POST：POST 已被知識庫的 index/search/ask 佔用，
+    //   再塞 podcast-* 進去會讓一個 handler 混兩種生命週期
+    //   （查詢毫秒級、轉錄數十秒級）。要改排隊時改動只落在這條。
+    ragFeeds: () => req<{
+      ok: boolean;
+      feeds: {
+        id: string; title: string; author: string;
+        episodeCount: number; indexedCount: number;
+      }[];
+    }>("/rag?action=feeds"),
+    ragEpisodes: (feedId: string) => req<{
+      ok: boolean;
+      episodes: {
+        guid: string; title: string; durationSec: number | null;
+        status: string; error: string | null; segments: number;
+      }[];
+    }>(`/rag?action=episodes&feedId=${encodeURIComponent(feedId)}`),
+    ragSubscribe: (feedUrl: string) => req<{
+      ok: boolean; feedId: string; added: number; truncatedFrom?: number;
+    }>("/rag", { method: "PATCH", body: JSON.stringify({ action: "podcast-subscribe", feedUrl }) }),
+    /** 回傳的 segments 是寫進知識庫的片段數。整包要等轉錄完成（數十秒）。 */
+    ragIngest: (guid: string) => req<{
+      ok: boolean; segments: number; chunks: number; durationSec: number | null;
+    }>("/rag", { method: "PATCH", body: JSON.stringify({ action: "podcast-ingest", guid }) }),
 };
