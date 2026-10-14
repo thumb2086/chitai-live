@@ -107,41 +107,25 @@ export async function POST(req: Request) {
           error: "尚未連線或連線已過期，請重新連線 ZIXI",
         });
       }
-      // ★ 2026-10-14：這裡打的端點全部邪，實測結果：
-      //   /api/v1/wallet/summary → 404
-      //     （那條路徑在 zixi-earth 只存在於 dlinker.js，
-      //      硬體錢包的相容層）
-      //   /api/v1/auth/me → 401
-      //     （它是給 session JWT 用的，而我們手上是 OAuth token）
+      // ★ 2026-10-14 修正。這裡原本打的三個端點都不能用（實測）：
+      //   /api/v1/wallet/summary → 404（只存在於 dlinker.js 相容層）
+      //   /api/v1/auth/me        → 401（那是給 session JWT 用的）
+      //   /api/oauth/userinfo    → 200 但不回傳餘額
       //
-      //   OAuth token（zixi_oat_）唯一能用的是
-      //     /api/oauth/userinfo
-      //   見 zixi-earth/src/oauth.js：「GET /api/oauth/userinfo (Bearer oat_)」
-      //   寫法比照 src/lib/zixi-payments.ts 那個（它本來就是對的）。
-      //
-      // ★ 但它**不回傳餘額**：只有 sub / username / wallet_address / role。
-      //   餘額需要 session JWT，是另一套登入流程。
-      //
-      //   所以這裡不假装有餘額：回可以求到的部分，
-      //   balances 明確給 null 使前端知道「查不到」而不是「是 0」。
-      const BT = String.fromCharCode(96);
-      const res = await fetch(ZIXI_API + "/api/oauth/userinfo", {
+      // 改用 zixi-earth 新加的 /api/oauth/balance（2026-10-14）：
+      // 接受 oat_ token、回 ZXC/YJC，而且與 userinfo 共用同一個
+      // requireOAuthUser 驗證 —— 避免兩個函式對同一件事判斷不一致
+      // （那正是 zixi-earth 鏈上結算事故根因 8 的結構）。
+      const res = await fetch(`${ZIXI_API}/api/oauth/balance`, {
         headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
       });
-      if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      if (!res.ok || data?.error) {
         return NextResponse.json({
           success: false,
           connected: false,
-          error: "ZIXI 回應 " + res.status,
-        }, { status: res.status });
-      }
-      const data = await res.json();
-      if (data?.error) {
-        return NextResponse.json({
-          success: false,
-          connected: false,
-          error: String(data.error),
-        }, { status: 401 });
+          error: data?.error ? String(data.error) : "ZIXI 回應 " + res.status,
+        }, { status: res.status === 200 ? 401 : res.status });
       }
       return NextResponse.json({
         success: true,
@@ -149,11 +133,13 @@ export async function POST(req: Request) {
         sub: data?.sub || "",
         username: data?.username || "",
         address: data?.wallet_address || "",
-        role: data?.role || "",
-        balances: null,
-        balanceNote: "OAuth token 無法查餘額；需要 zixi-earth 提供餘額端點",
+        // ★ 字串不是數字：zixi-earth 端就是 String() 回的
+        //   （dlinker 的 addressBalances 也一樣）。前端顯示時再格式化，
+        //   不要在這裡轉 Number —— 同一個餘額有兩個型別就會對不起來。
+        balances: data?.balances || { ZXC: "0", YJC: "0" },
       });
     }
+
 
     if (action === "admin-transfer") {
       const adminSession = process.env.ZIXI_ADMIN_SESSION;
