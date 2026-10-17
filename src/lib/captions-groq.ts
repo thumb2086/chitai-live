@@ -27,17 +27,23 @@
 // to be set when this module was first imported.
 const directUrl = () => (process.env.GROQ_DIRECT_URL ?? "https://api.groq.com/openai/v1").replace(/\/+$/, "");
 const routerKey = () => process.env.GROQ_ROUTER_KEY ?? "";
-const directKey = () => process.env.GROQ_API_KEY ?? "";
 
 /**
- * The router serves the OpenAI contract under /v1, and people naturally paste
- * the bare host into GROQ_ROUTER_URL, so add the version segment when missing.
+ * 錄音轉寫專用的代理網址（★ 與 chat/embedding 的 router 分開）。
+ *
+ * 為什麼要拆開：
+ *   groq-router 的 `/api/transcriptions` 已刻意停用 —— STT_LEGACY_ENABLED 不是 "1" 就回
+ *   410，body 裡還指名 use_instead 指向 stt.twonline.dpdns.org。
+ *   而同一個 groq-router 的 /v1/embeddings 與 /v1/chat/completions 還活著
+ *   （rag.ts 用它們）。所以不能改 GROQ_ROUTER_URL，只能另開一個。
+ *
+ * 實測 2026-10-17：
+ *   POST https://vercel-router-khaki.vercel.app/api/transcriptions → 410（已停用）
+ *   POST https://stt.twonline.dpdns.org/v1/audio/transcriptions    → 401（活的，要認證）
  */
-const routerUrl = () => {
-  const raw = (process.env.GROQ_ROUTER_URL ?? "").replace(/\/+$/, "");
-  if (!raw) return "";
-  return /\/v\d+$/.test(raw) ? raw : `${raw}/v1`;
-};
+const sttProxyUrl = () =>
+  (process.env.STT_PROXY_URL ?? "https://stt.twonline.dpdns.org/v1").replace(/\/+$/, "");
+const directKey = () => process.env.GROQ_API_KEY ?? "";
 
 /** Set to "false" to prefer the router even when a direct key is available. */
 const directFirst = () => (process.env.GROQ_DIRECT_FIRST ?? "true").toLowerCase() !== "false";
@@ -52,7 +58,7 @@ export function providerStatus() {
   const order = providerOrder();
   return {
     direct: Boolean(directKey()),
-    router: Boolean(routerUrl() && routerKey()),
+    router: Boolean(sttProxyUrl() && routerKey()),
     /** The provider that will be tried first. */
     primary: (order[0]?.id ?? null) as ProviderId | null,
     order: order.map((p) => p.id),
@@ -65,7 +71,7 @@ export function groqConfigured() {
 
 export function providerOrder(): Provider[] {
   const direct: Provider = { id: "direct", url: directUrl(), key: directKey() };
-  const router: Provider = { id: "router", url: routerUrl(), key: routerKey() };
+  const router: Provider = { id: "router", url: sttProxyUrl(), key: routerKey() };
   const usable = [direct, router].filter((p) => p.key && p.url);
   return directFirst() ? usable : usable.slice().reverse();
 }

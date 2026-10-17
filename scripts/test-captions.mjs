@@ -15,7 +15,7 @@ const cookie = `sf_session=${sid}`;
 const health = await (await fetch(`${base}/api/v1/captions/transcribe`)).json();
 console.log("router:", JSON.stringify(health));
 if (!health.configured) {
-  console.log("FAIL: router not configured — set GROQ_ROUTER_URL / GROQ_ROUTER_KEY");
+  console.log("FAIL: router not configured — set GROQ_ROUTER_KEY（網址走 STT_PROXY_URL，預設 https://stt.twonline.dpdns.org/v1）");
   process.exit(1);
 }
 
