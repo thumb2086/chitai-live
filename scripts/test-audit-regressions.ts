@@ -4,7 +4,10 @@
  * Each section prints PASS/FAIL independently so one fix can be reverted and
  * re-checked in isolation.
  *
- * Usage: npx tsx scripts/test-audit-regressions.ts
+ * Usage: node_modules\.bin\jiti.cmd scripts\test-audit-regressions.ts
+ *
+ * (原本寫的是 `npx tsx`，但這個專案沒有安裝 tsx —— 一個跑不起來的
+ *  驗證腳本不是驗證腳本。jiti 已經在 devDependencies 裡，所以用它。)
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
