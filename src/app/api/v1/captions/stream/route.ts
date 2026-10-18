@@ -1,5 +1,5 @@
 import { queryOne } from "@/lib/db-http";
-import { addClient } from "@/lib/caption-sse";
+import { addClient, createSseStream } from "@/lib/caption-sse";
 import { getSubtitleSettings } from "@/lib/subtitle-config";
 
 export const dynamic = "force-dynamic";
@@ -20,12 +20,7 @@ export async function GET(req: Request) {
   const config = await getSubtitleSettings(userId);
   if (!config.enabled) return new Response("Disabled", { status: 403 });
 
-  const stream = new ReadableStream({
-    start(controller) {
-      const cleanup = addClient(userId, controller);
-      req.signal.addEventListener("abort", cleanup);
-    },
-  });
+  const stream = createSseStream(userId, req.signal);
 
   return new Response(stream, {
     headers: {

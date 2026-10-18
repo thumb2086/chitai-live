@@ -5,8 +5,6 @@ import {
 } from "@/lib/zixi-donations-http";
 import { getOrCreateUser, getSessionId, unauthorized } from "@/lib/getUser";
 
-const ZIXI_API = "https://zixi-casino-api.onrender.com/api/v1";
-
 export async function POST(req: Request) {
   try {
     const body = await req.json();

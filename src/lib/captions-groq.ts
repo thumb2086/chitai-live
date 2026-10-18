@@ -45,6 +45,32 @@ const sttProxyUrl = () =>
   (process.env.STT_PROXY_URL ?? "https://stt.twonline.dpdns.org/v1").replace(/\/+$/, "");
 const directKey = () => process.env.GROQ_API_KEY ?? "";
 
+/**
+ * 某個 provider 的 host，給診斷端點顯示「現在實際連到哪一台」。
+ *
+ * ★ 為什麼不是讓呼叫端自己 new URL()
+ *   1. URL 來自環境變數。`STT_PROXY_URL="忘了 https://"` 會讓
+ *      `new URL(...)` 丟 TypeError —— 而那正是最需要診斷的時候。
+ *   2. 診斷端點必須報**實際轉寫用的那一台**。
+ *      2026-10-17 把轉寫從 GROQ_ROUTER_URL 搬到 STT_PROXY_URL 之後，
+ *      診斷端點還在報舊變數 —— 於是它顯示的 host 從來不是真的在用的那台。
+ *
+ * ★ 為什麼不看 providerOrder()
+ *   providerOrder() 會濾掉沒有 key 的 provider。但「網址有設、key 沒設」正是
+ *   打開這一頁要查的狀態 —— 回 null 等於把要找的答案藏掉一半。
+ *   這裡直接問「這家的網址指向哪台」，至於 key 有沒有是 status() 的事。
+ *
+ * 回 null 表示網址語法壞掉（例如忘了 https://），對顯示就是同一件事。
+ */
+export function providerHost(id: ProviderId): string | null {
+  const url = id === "direct" ? directUrl() : sttProxyUrl();
+  try {
+    return new URL(url).host || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Set to "false" to prefer the router even when a direct key is available. */
 const directFirst = () => (process.env.GROQ_DIRECT_FIRST ?? "true").toLowerCase() !== "false";
 
@@ -183,7 +209,7 @@ export async function transcribePcm(
   providers: Provider[] = providerOrder()
 ): Promise<TranscribeResult> {
   if (providers.length === 0) {
-    throw new Error("Groq 未設定（需要 GROQ_API_KEY，或 GROQ_ROUTER_URL + GROQ_ROUTER_KEY）");
+    throw new Error("Groq 未設定（需要 GROQ_API_KEY，或 STT_PROXY_URL + GROQ_ROUTER_KEY）");
   }
 
   const { model = "whisper-large-v3-turbo", language = "zh", prompt = "", timeoutMs = 20000 } = opts;

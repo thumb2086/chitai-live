@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
-  transcribePcm, pcmRms, looksLikeHallucination, groqConfigured, providerStatus, SAMPLE_RATE,
+  transcribePcm, pcmRms, looksLikeHallucination, groqConfigured, providerStatus, providerHost,
+  SAMPLE_RATE,
 } from "@/lib/captions-groq";
 import { getOrCreateUser, getSessionId, unauthorized } from "@/lib/getUser";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/usage";
@@ -27,7 +28,7 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   if (!groqConfigured()) {
     return NextResponse.json(
-      { error: "Groq 未設定，請設定 GROQ_API_KEY（直連）或 GROQ_ROUTER_URL + GROQ_ROUTER_KEY" },
+      { error: "Groq 未設定，請設定 GROQ_API_KEY（直連）或 STT_PROXY_URL + GROQ_ROUTER_KEY（錄音備援）" },
       { status: 503 }
     );
   }
@@ -149,7 +150,10 @@ export async function GET() {
     order: s.order,
     direct: s.direct,
     router: s.router,
-    routerHost: process.env.GROQ_ROUTER_URL ? new URL(process.env.GROQ_ROUTER_URL).host : null,
+    // ★ 這裡曾經讀 GROQ_ROUTER_URL，而那個變數是給 chat/embedding 用的。
+    //   轉寫的備援早就搬到 STT_PROXY_URL，所以診斷頁顯示的主機
+    //   **從來不是實際在轉寫的那一台** —— 照著它排查會一路查錯方向。
+    routerHost: providerHost("router"),
     sampleRate: SAMPLE_RATE,
     models: ["whisper-large-v3-turbo", "whisper-large-v3"],
   });
