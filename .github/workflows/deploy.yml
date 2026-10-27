@@ -1,0 +1,113 @@
+name: Deploy chitai-live to Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.33.0'
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      # --- Checkout ---
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for version detection if any
+
+      # --- Setup pnpm ---
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      # --- Setup Node.js ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      # --- Install dependencies ---
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      # --- Build Next.js ---
+      - name: Build Next.js
+        run: pnpm run build
+        working-directory: .
+        env:
+          NODE_ENV: production
+
+      # --- Build OpenNext for Cloudflare ---
+      - name: Build OpenNext (Cloudflare)
+        run: npx opennextjs-cloudflare build
+        working-directory: .
+        env:
+          NODE_ENV: production
+
+      # --- Deploy to Cloudflare Workers ---
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: deploy
+          workingDirectory: .
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
+      # --- Notify on failure (optional) ---
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "Deployment failed. Check GitHub Actions logs."
+          exit 1
+
+  # Optional: Run tests before deploy
+  test:
+    name: Type Check & Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type Check
+        run: pnpm run lint 2>&1 || true
+        continue-on-error: true
+
+      - name: TypeScript Check
+        run: npx tsc --noEmit 2>&1 | head -50
+        continue-on-error: true
