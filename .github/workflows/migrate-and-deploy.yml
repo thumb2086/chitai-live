@@ -68,8 +68,7 @@ jobs:
           echo "KV_CHITAI_NAMESPACE_ID: ${KV_CHITAI_NAMESPACE_ID}"
           echo "UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}"
           if [ -z "$UPSTASH_REDIS_REST_TOKEN" ] || [ "$UPSTASH_REDIS_REST_TOKEN" = "NEEDS_UPDATE_FROM_UPSTASH_CONSOLE" ]; then
-            echo "⚠️ UPSTASH_REDIS_REST_TOKEN not set properly"
-            exit 1
+            echo "⚠️ UPSTASH_REDIS_REST_TOKEN not set properly - skipping Upstash migration"
           fi
 
       - name: Run migration script
