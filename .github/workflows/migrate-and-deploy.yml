@@ -106,12 +106,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install chitai-live dependencies
-        working-directory: ./chitai-live
+      - name: Install dependencies
         run: npm install
 
       - name: Build static export
-        working-directory: ./chitai-live
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
@@ -119,11 +117,10 @@ jobs:
 
       - name: Verify build output
         run: |
-          ls -la chitai-live/out/
-          echo "Build output size: $(du -sh chitai-live/out/)"
+          ls -la out/
+          echo "Build output size: $(du -sh out/)"
 
       - name: Deploy to Cloudflare Pages
-        working-directory: ./chitai-live
         run: |
           npx wrangler pages deploy out --project-name=livestream-dashboard --branch=main --commit-dirty=true
         env:
@@ -153,10 +150,11 @@ jobs:
         working-directory: ./apps/api
         run: |
           npm install
-          npx wrangler deploy -c wrangler.toml --env production
+          npx wrangler@latest deploy -c wrangler.toml --env production
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           D1_CHITAI_DATABASE_ID: ${{ secrets.D1_CHITAI_DATABASE_ID }}
           KV_CHITAI_NAMESPACE_ID: ${{ secrets.KV_CHITAI_NAMESPACE_ID }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -167,10 +165,11 @@ jobs:
         working-directory: ./apps/groq-api
         run: |
           npm install
-          npx wrangler deploy -c wrangler.toml --env production
+          npx wrangler@latest deploy -c wrangler.toml --env production
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           KV_GROQ_NAMESPACE_ID: ${{ secrets.KV_GROQ_NAMESPACE_ID }}
 
   # ========== 4. 部署完成通知 ==========
