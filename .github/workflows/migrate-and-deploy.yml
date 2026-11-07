@@ -57,7 +57,7 @@ jobs:
           npm install -g wrangler@latest
 
       - name: Install project dependencies
-        run: npm ci
+        run: npm install
 
       - name: Verify secrets
         run: |
@@ -110,7 +110,7 @@ jobs:
 
       - name: Install chitai-live dependencies
         working-directory: ./chitai-live
-        run: npm ci
+        run: npm install
 
       - name: Build static export
         working-directory: ./chitai-live
@@ -155,7 +155,7 @@ jobs:
         if: ${{ hashFiles('apps/api/**') != '' }}
         working-directory: ./apps/api
         run: |
-          npm ci
+          npm install
           npx wrangler deploy --env production
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -169,7 +169,7 @@ jobs:
         if: ${{ hashFiles('apps/groq-api/**') != '' }}
         working-directory: ./apps/groq-api
         run: |
-          npm ci
+          npm install
           npx wrangler deploy --env production
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
