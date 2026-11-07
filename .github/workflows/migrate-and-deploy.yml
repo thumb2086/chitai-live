@@ -125,14 +125,13 @@ jobs:
           echo "Build output size: $(du -sh chitai-live/out/)"
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          projectName: livestream-dashboard
-          directory: ./chitai-live/out
-          branch: main
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: ./chitai-live
+        run: |
+          npx wrangler pages deploy out --project-name=livestream-dashboard --branch=main --commit-dirty=true
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
 
   # ========== 3. 部署 API Workers (後端) ==========
   deploy-api:
@@ -156,7 +155,7 @@ jobs:
         working-directory: ./apps/api
         run: |
           npm install
-          npx wrangler deploy --env production
+          npx wrangler deploy -c wrangler.toml --env production
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -170,7 +169,7 @@ jobs:
         working-directory: ./apps/groq-api
         run: |
           npm install
-          npx wrangler deploy --env production
+          npx wrangler deploy -c wrangler.toml --env production
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
