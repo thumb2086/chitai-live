@@ -1,0 +1,201 @@
+name: Migrate & Deploy chitai-live to Cloudflare
+
+on:
+  workflow_dispatch:
+    inputs:
+      skipMigration:
+        description: 'Skip data migration (only deploy)'
+        type: boolean
+        default: false
+      skipDeploy:
+        description: 'Skip deployment (only migrate)'
+        type: boolean
+        default: false
+
+  push:
+    branches: [main]
+    paths:
+      - 'chitai-live/**'
+      - 'scripts/migrate-chitai.js'
+      - 'wrangler*.toml'
+      - 'wrangler*.jsonc'
+      - '.github/workflows/migrate-and-deploy.yml'
+
+env:
+  CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+  CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+  NEON_CHITAI_URL: ${{ secrets.NEON_CHITAI_URL }}
+  UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+  UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+  NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+  D1_CHITAI_DATABASE_ID: ${{ secrets.D1_CHITAI_DATABASE_ID }}
+  KV_CHITAI_NAMESPACE_ID: ${{ secrets.KV_CHITAI_NAMESPACE_ID }}
+  KV_CHITAI_PREVIEW_ID: ${{ secrets.KV_CHITAI_PREVIEW_ID }}
+  KV_GROQ_NAMESPACE_ID: ${{ secrets.KV_GROQ_NAMESPACE_ID }}
+  KV_GROQ_PREVIEW_ID: ${{ secrets.KV_GROQ_PREVIEW_ID }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+jobs:
+  # ========== 1. 資料遷移 ==========
+  migrate:
+    name: Migrate Data to Cloudflare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ !inputs.skipMigration }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install global tools
+        run: |
+          npm install -g wrangler@latest @upstash/redis pg
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Verify secrets
+        run: |
+          echo "CF_ACCOUNT_ID: ${CF_ACCOUNT_ID:0:8}..."
+          echo "CF_API_TOKEN: ${CF_API_TOKEN:0:8}..."
+          echo "NEON_CHITAI_URL: ${NEON_CHITAI_URL:0:30}..."
+          echo "D1_CHITAI_DATABASE_ID: ${D1_CHITAI_DATABASE_ID}"
+          echo "KV_CHITAI_NAMESPACE_ID: ${KV_CHITAI_NAMESPACE_ID}"
+          echo "UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL}"
+          if [ -z "$UPSTASH_REDIS_REST_TOKEN" ] || [ "$UPSTASH_REDIS_REST_TOKEN" = "NEEDS_UPDATE_FROM_UPSTASH_CONSOLE" ]; then
+            echo "⚠️ UPSTASH_REDIS_REST_TOKEN not set properly"
+            exit 1
+          fi
+
+      - name: Run migration script
+        run: node scripts/migrate-chitai.js
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          NEON_CHITAI_URL: ${{ secrets.NEON_CHITAI_URL }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          D1_CHITAI_DATABASE_ID: ${{ secrets.D1_CHITAI_DATABASE_ID }}
+          KV_CHITAI_NAMESPACE_ID: ${{ secrets.KV_CHITAI_NAMESPACE_ID }}
+          KV_GROQ_NAMESPACE_ID: ${{ secrets.KV_GROQ_NAMESPACE_ID }}
+
+      - name: Upload migration output
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-output
+          path: migration-output/
+          retention-days: 7
+
+  # ========== 2. 部署 Cloudflare Pages (前端) ==========
+  deploy-pages:
+    name: Deploy to Cloudflare Pages
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ !inputs.skipDeploy }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: chitai-live/package-lock.json
+
+      - name: Install chitai-live dependencies
+        working-directory: ./chitai-live
+        run: npm ci
+
+      - name: Build static export
+        working-directory: ./chitai-live
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NODE_ENV: production
+
+      - name: Verify build output
+        run: |
+          ls -la chitai-live/out/
+          echo "Build output size: $(du -sh chitai-live/out/)"
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          projectName: livestream-dashboard
+          directory: ./chitai-live/out
+          branch: main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  # ========== 3. 部署 API Workers (後端) ==========
+  deploy-api:
+    name: Deploy API Workers
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ !inputs.skipDeploy }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 部署 chitai-live API
+      - name: Deploy chitai-live API
+        if: ${{ hashFiles('apps/api/**') != '' }}
+        working-directory: ./apps/api
+        run: |
+          npm ci
+          npx wrangler deploy --env production
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          D1_CHITAI_DATABASE_ID: ${{ secrets.D1_CHITAI_DATABASE_ID }}
+          KV_CHITAI_NAMESPACE_ID: ${{ secrets.KV_CHITAI_NAMESPACE_ID }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      # 部署 groq-router API
+      - name: Deploy groq-router API
+        if: ${{ hashFiles('apps/groq-api/**') != '' }}
+        working-directory: ./apps/groq-api
+        run: |
+          npm ci
+          npx wrangler deploy --env production
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          KV_GROQ_NAMESPACE_ID: ${{ secrets.KV_GROQ_NAMESPACE_ID }}
+
+  # ========== 4. 部署完成通知 ==========
+  notify:
+    name: Notify Deployment Status
+    needs: [deploy-pages, deploy-api]
+    runs-on: ubuntu-latest
+    if: always() && !inputs.skipDeploy
+    steps:
+      - name: Check deployment status
+        run: |
+          echo "Deployment completed!"
+          echo "Frontend: https://zixilive.dpdns.org"
+          echo "Pages URL: https://master.livestream-dashboard-cs8.pages.dev"
+          if [ "${{ needs.deploy-pages.result }}" == "success" ]; then
+            echo "✅ Pages deployment: SUCCESS"
+          else
+            echo "❌ Pages deployment: FAILED"
+          fi
+          if [ "${{ needs.deploy-api.result }}" == "success" ]; then
+            echo "✅ API deployment: SUCCESS"
+          else
+            echo "❌ API deployment: FAILED"
+          fi

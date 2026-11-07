@@ -1,0 +1,32 @@
+name = "chitai-live-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 資料庫綁定 (chitai-live)
+[[d1_databases]]
+binding = "DB"
+database_name = "chitai-live"
+database_id = "68a121de-5a7f-4ab4-b08c-216af1a57f8c"
+
+# Workers KV 命名空間 (chitai-live-kv)
+[[kv_namespaces]]
+binding = "KV"
+id = "8c2d769d055c4e45b516a125865fa214"
+preview_id = "3bd5193cc4d54556b42619862c720aef"
+
+# 環境變數
+[vars]
+ENVIRONMENT = "production"
+JWT_ISSUER = "chitai-live"
+JWT_AUDIENCE = "chitai-live-web"
+
+# 生產環境覆蓋
+[env.production]
+name = "chitai-live-api"
+vars = { ENVIRONMENT = "production" }
+
+# 預覽環境
+[env.preview]
+name = "chitai-live-api-preview"
+vars = { ENVIRONMENT = "preview" }
