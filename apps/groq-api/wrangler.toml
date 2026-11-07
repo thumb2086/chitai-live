@@ -3,24 +3,36 @@ main = "src/index.ts"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
 
+# 生產環境配置
+[env.production]
+name = "groq-router-api"
+vars = { 
+  ENVIRONMENT = "production",
+  GROQ_KEYS = "",
+  NVIDIA_API_KEY = "",
+  ROUTER_TOKEN = "",
+  ADMIN_TOKEN = ""
+}
+
 # Workers KV 命名空間 (取代 Upstash Redis)
-[[kv_namespaces]]
+[[env.production.kv_namespaces]]
 binding = "KV"
 id = "62d5169117f04c619facedf1f134ed8f"
 preview_id = "e0b85740e2c14d1eaebdf001c94a4516"
 
-# 環境變數 (從 GitHub Secrets 注入)
-[vars]
-ENVIRONMENT = "production"
-GROQ_KEYS = ""  # 逗號分隔的 Groq API Keys
-NVIDIA_API_KEY = ""
-ROUTER_TOKEN = ""
-ADMIN_TOKEN = ""
-
-[env.production]
-name = "groq-router-api"
-vars = { ENVIRONMENT = "production" }
-
+# 預覽環境
 [env.preview]
 name = "groq-router-api-preview"
-vars = { ENVIRONMENT = "preview" }
+vars = { 
+  ENVIRONMENT = "preview",
+  GROQ_KEYS = "",
+  NVIDIA_API_KEY = "",
+  ROUTER_TOKEN = "",
+  ADMIN_TOKEN = ""
+}
+
+# Workers KV 命名空間 (預覽)
+[[env.preview.kv_namespaces]]
+binding = "KV"
+id = "62d5169117f04c619facedf1f134ed8f"
+preview_id = "e0b85740e2c14d1eaebdf001c94a4516"
