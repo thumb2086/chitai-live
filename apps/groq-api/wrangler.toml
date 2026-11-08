@@ -3,36 +3,46 @@ main = "src/index.ts"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
 
-# 生產環境配置
+# Workers KV (replaces Upstash Redis)
+[[kv_namespaces]]
+binding = "KV"
+id = "62d5169117f04c619facedf1f134ed8f"
+preview_id = "e0b85740e2c14d1eaebdf001c94a4516"
+
+# Service Mesh Configuration
+[vars]
+ENVIRONMENT = "production"
+JWT_ISSUER = "zixi-ecosystem"
+JWT_AUDIENCE = "zixi-services"
+
+# Service URLs
+GROQ_ROUTER_URL = "https://api.groq-router.vercel.app"
+ZIXI_EARTH_URL = "https://zixiearth.dpdns.org"
+CHITAI_API_URL = "https://api.zixilive.dpdns.org"
+
+# Service Auth (set via wrangler secret put)
+# GROQ_KEYS = "gsk_key1,gsk_key2,..."
+# NVIDIA_API_KEY = "your-nvidia-key"
+# ROUTER_TOKEN = "ak_router_token"
+# ADMIN_TOKEN = "ak_admin_token"
+# JWT_SECRET = "your-32-char-secret"
+# SERVICE_API_KEY = "svc_groq_router_xxx"
+
+# Feature Flags
+ENABLE_CROSS_SERVICE_CACHE = "true"
+ENABLE_DISTRIBUTED_TRACING = "true"
+ENABLE_CIRCUIT_BREAKER = "true"
+ENABLE_REQUEST_DEDUPLICATION = "true"
+
+# Service Mesh Config
+SERVICE_REGISTRY_URL = "https://api.zixilive.dpdns.org/.well-known/services.json"
+CIRCUIT_BREAKER_THRESHOLD = "3"
+CIRCUIT_BREAKER_RESET_MS = "60000"
+
 [env.production]
 name = "groq-router-api"
-vars = { 
-  ENVIRONMENT = "production",
-  GROQ_KEYS = "",
-  NVIDIA_API_KEY = "",
-  ROUTER_TOKEN = "",
-  ADMIN_TOKEN = ""
-}
+vars = { ENVIRONMENT = "production" }
 
-# Workers KV 命名空間 (取代 Upstash Redis)
-[[env.production.kv_namespaces]]
-binding = "KV"
-id = "62d5169117f04c619facedf1f134ed8f"
-preview_id = "e0b85740e2c14d1eaebdf001c94a4516"
-
-# 預覽環境
 [env.preview]
 name = "groq-router-api-preview"
-vars = { 
-  ENVIRONMENT = "preview",
-  GROQ_KEYS = "",
-  NVIDIA_API_KEY = "",
-  ROUTER_TOKEN = "",
-  ADMIN_TOKEN = ""
-}
-
-# Workers KV 命名空間 (預覽)
-[[env.preview.kv_namespaces]]
-binding = "KV"
-id = "62d5169117f04c619facedf1f134ed8f"
-preview_id = "e0b85740e2c14d1eaebdf001c94a4516"
+vars = { ENVIRONMENT = "preview" }

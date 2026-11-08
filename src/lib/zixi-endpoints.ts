@@ -46,7 +46,7 @@
 // 這 5 個檔案不需要再動。
 
 /** zixi-earth 的 Workers 網址（實測 HTTP 200）。 */
-export const ZIXI_EARTH_DEFAULT = "https://zixi-earth.bold-waterfall-5f4d.workers.dev";
+export const ZIXI_EARTH_DEFAULT = "https://zixiearth.dpdns.org";
 
 /** 走 /api/v1/* 風格路徑的端點（舊 zixi-casino 的 API 形狀）。 */
 export function zixiApiBase(): string {

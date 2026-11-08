@@ -628,6 +628,40 @@ admin.patch('/users/:id/ban', zValidator('json', z.object({
 app.route('/api/admin', admin);
 
 // ========== 錯誤處理 ==========
+app.get('/.well-known/services.json', (c) => {
+  return c.json({
+    version: '1.0',
+    services: {
+      'zixi-earth': { name: 'zixi-earth', baseUrl: 'https://zixiearth.dpdns.org', health: '/health', capabilities: ['company-management', 'stock-trading', 'mining', 'casino-games', 'wallet'] },
+      'groq-router': { name: 'groq-router', baseUrl: 'https://groq.zixilive.dpdns.org', health: '/health', capabilities: ['chat-completion', 'models-list', 'usage-tracking'] },
+      'chitai-live-api': { name: 'chitai-live-api', baseUrl: 'https://api.zixilive.dpdns.org', health: '/health', capabilities: ['stream-management', 'chat', 'donations', 'user-management'] },
+      'chitai-live-web': { name: 'chitai-live-web', baseUrl: 'https://www.zixilive.dpdns.org', health: '/', capabilities: ['stream-dashboard', 'chat-ui', 'donation-alerts'] },
+    },
+    shared: { jwt: { issuer: 'zixi-ecosystem', audience: 'zixi-services' } }
+  }, 200, { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=600' });
+});
+
+app.get('/.well-known/services/health', async (c) => {
+  const services: { name: string; url: string | null }[] = [
+    { name: 'groq-router', url: 'https://groq.zixilive.dpdns.org/health' },
+    { name: 'chitai-live-api', url: null },
+  ];
+  const results = await Promise.allSettled(services.map(async (svc) => {
+    if (!svc.url) return { name: svc.name, healthy: true, status: 200, self: true };
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(svc.url, { method: 'GET', signal: controller.signal, headers: { 'Accept': 'application/json' } });
+      clearTimeout(timeout);
+      const ok = res.status < 502;
+      return { name: svc.name, healthy: ok, status: res.status };
+    } catch (e: any) { return { name: svc.name, healthy: false, error: e.message }; }
+  }));
+  const health = results.map(r => r.status === 'fulfilled' ? r.value : { name: 'unknown', healthy: false });
+  const overall = health.filter(h => h.name !== 'zixi-earth').every(h => h.healthy) ? 'healthy' : 'degraded';
+  return c.json({ overall, services: health, timestamp: new Date().toISOString() });
+});
+
 app.onError((err, c) => {
   console.error('API Error:', err);
   return c.json({
