@@ -928,6 +928,9 @@ async def on_startup(app: web.Application):
     log(f"  ✓ 就緒  ws://127.0.0.1:{app['port']}   /health")
 
 
+import openai_server  # noqa: E402 — TTS extra, imports AFTER configuration
+
+
 def create_app(port: int) -> web.Application:
     """組出 app。
 
@@ -946,6 +949,7 @@ def create_app(port: int) -> web.Application:
         # 兩者的消費者與刷新頻率不同（就緒判斷 vs 儀表板）。
         web.get("/metrics", metrics),
         web.get("/ws", ws_handler),
+        web.post("/v1/audio/speech", openai_server.v1_speech),
     ])
     return app
 
