@@ -318,6 +318,53 @@ auth.get('/me', async (c) => {
   });
 });
 
+// ========== OAuth provider stubs (Twitch / YouTube / Google / Discord) ==========
+// �@
+auth.get('/:provider{youtube|twitch|google|discord}', async (c) => {
+  const provider = c.req.param('provider');
+  const env = c.env as any;
+  const supported = ['youtube', 'twitch', 'google', 'discord'];
+  if (!supported.includes(provider)) {
+    return c.json({ success: false, error: `Unknown OAuth provider: ${provider}` }, 404);
+  }
+  const clientIdVar = `${provider.toUpperCase()}_CLIENT_ID`;
+  const clientId = env[clientIdVar];
+  if (!clientId) {
+    return c.json({
+      success: false,
+      error: `OAuth provider '${provider}' is not configured. Set ${clientIdVar} and ${provider.toUpperCase()}_CLIENT_SECRET secrets on the chitai-live-api Worker.`,
+      hint: `npx wrangler secret put ${clientIdVar} --config wrangler.toml`,
+    }, 503);
+  }
+  const redirectUri = 'https://api.zixilive.dpdns.org/api/auth/callback';
+  let oauthUrl: string;
+  if (provider === 'youtube' || provider === 'google') {
+    const scope = provider === 'youtube' ? 'https://www.googleapis.com/auth/youtube.readonly' : 'openid email profile';
+    oauthUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope, access_type: 'offline', prompt: 'consent' }).toString();
+  } else if (provider === 'twitch') {
+    oauthUrl = 'https://id.twitch.tv/oauth2/authorize?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope: 'user:read:email' }).toString();
+  } else {
+    oauthUrl = 'https://discord.com/api/oauth2/authorize?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope: 'identify email' }).toString();
+  }
+  return c.redirect(oauthUrl, 302);
+});
+
+auth.get('/callback', async (c) => {
+  const code = c.req.query('code');
+  const error = c.req.query('error');
+  if (error) {
+    return c.json({ success: false, error: `OAuth denied: ${error}` }, 400);
+  }
+  if (!code) {
+    return c.json({ success: false, error: 'Missing OAuth authorization code.' }, 400);
+  }
+  return c.json({
+    success: false,
+    error: 'OAuth token exchange not yet implemented. Code received but token refresh wiring pending credentials (YOUTUBE_CLIENT_ID, etc.).',
+    codeReceived: true,
+  }, 501);
+});
+
 app.route('/api/auth', auth);
 
 // ========== 受保護路由中介軟體 ==========
