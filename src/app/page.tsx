@@ -94,7 +94,24 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--ic-canvas)]">
+    <div className="min-h-screen bg-[var(--ic-canvas)]">      {/* Livio-style top bar: logo + anchors + Google CTA */}
+      <div className="sticky top-0 z-50 border-b border-black/5 bg-white/85 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
+          <span className="flex items-center gap-2">
+            <img src="/logo.svg" alt="熾台" width={28} height={28} />
+            <strong className="text-[15px] tracking-tight">熾台 CHITAI</strong>
+          </span>
+          <nav className="hidden items-center gap-6 text-[13px] text-black/60 min-[640px]:flex">
+            <a href="#tools" className="hover:text-black">工具</a>
+            <a href="#suite" className="hover:text-black">工具套件</a>
+            <a href="#plans" className="hover:text-black">方案</a>
+            <a href="#support" className="hover:text-black">支援</a>
+          </nav>
+          <a href="https://api.zixilive.dpdns.org/api/auth/youtube" className="rounded-full bg-black px-4 py-2 text-[13px] font-[650] text-white no-underline hover:bg-black/80">開啟控制台</a>
+        </div>
+      </div>
+
+
 
       {/* ── Hero ──
            ★ 背景加一層極淡的橘色光暈（radial-gradient），
@@ -174,7 +191,7 @@ export default function Home() {
       </header>
 
       {/* ── 功能 ── */}
-      <section className="mx-auto max-w-5xl px-5 py-20">
+      <section id="tools" className="mx-auto max-w-5xl px-5 py-20">
         <h2 className="text-center text-[26px] font-[700] tracking-tight text-[var(--ic-ink)]">
           開台前後要的工具，都在這裡
         </h2>
@@ -217,7 +234,7 @@ export default function Home() {
       {/* ── 三步驟 ──
            ★ 背景用橘色極淡底，與上下白色區隔開，
              且呼應品牌色（不用灰色分隔線）。*/}
-      <section
+      <section id="suite"
         className="px-5 py-20"
         style={{ background: "linear-gradient(180deg, rgba(255,107,0,0.045) 0%, rgba(255,107,0,0.02) 100%)" }}
       >
@@ -246,7 +263,7 @@ export default function Home() {
       </section>
 
       {/* ── 計費 ── */}
-      <section className="mx-auto max-w-3xl px-5 py-20">
+      <section id="plans" className="mx-auto max-w-3xl px-5 py-20">
         <h2 className="text-center text-[26px] font-[700] tracking-tight text-[var(--ic-ink)]">
           計費方式
         </h2>
@@ -329,6 +346,33 @@ export default function Home() {
         </div>
         <p className="mt-10 text-[12px] text-white/30">熾台 CHITAI · 直播互動工具</p>
       </section>
+
+      {/* Footer - Livio style */}
+      <footer id="support" className="border-t border-black/5 bg-white/60">
+        <div className="mx-auto flex max-w-5xl flex-col gap-8 px-5 py-12 md:flex-row md:items-start md:justify-between">
+          <div>
+            <span className="flex items-center gap-2"><img src="/logo.svg" alt="熾台" width={32} height={32} /><strong>熾台 CHITAI</strong></span>
+            <p className="mt-3 max-w-xs text-[13px] text-black/50">一站式直播工具：斗內、聊天室、即時字幕與機器人。</p>
+          </div>
+          <div className="flex gap-12 text-[13px]">
+            <div>
+              <p className="mb-3 font-[650]">產品</p>
+              <p className="mb-2"><a href="#tools" className="text-black/55 no-underline hover:text-black">工具</a></p>
+              <p className="mb-2"><a href="https://api.zixilive.dpdns.org/api/auth/youtube" className="text-black/55 no-underline hover:text-black">控制台</a></p>
+            </div>
+            <div>
+              <p className="mb-3 font-[650]">資源</p>
+              <p className="mb-2"><a href="/dashboard/replay-analysis" className="text-black/55 no-underline hover:text-black">回放分析</a></p>
+              <p className="mb-2"><a href="/dashboard/commands" className="text-black/55 no-underline hover:text-black">直播指令</a></p>
+            </div>
+            <div>
+              <p className="mb-3 font-[650]">支援</p>
+              <p className="mb-2"><a href="mailto:support@zixilive.dpdns.org" className="text-black/55 no-underline hover:text-black">聯絡我們</a></p>
+            </div>
+          </div>
+        </div>
+        <p className="border-t border-black/5 px-5 py-4 text-center text-[12px] text-black/40">© 2026 熾台 CHITAI | 子熙幣儲值計費</p>
+      </footer>
     </div>
   );
 }
