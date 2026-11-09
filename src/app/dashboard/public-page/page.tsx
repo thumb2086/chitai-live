@@ -51,7 +51,7 @@ export default function PublicPage() {
   if (error && !state) return <div className="p-8 text-center text-red-500">{error}</div>;
 
   const avatarUrl = state.avatar || null;
-  const previewUrl = `${origin}/@${state.username}`;
+  const previewUrl = `${origin}/${state.username}`;
   const copyUrl = () => { navigator.clipboard.writeText(previewUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   // Live status comes from the platform connection, not from `publicPage`.
