@@ -7,7 +7,7 @@ import {
   Globe, Cable, Clapperboard, UserCog, Monitor,
   Bell, ScrollText, Target, Trophy,
   MessageSquare, Captions, Terminal, BarChart3,
-  Wallet, Heart, Library,
+  Wallet, Heart, ShoppingBag, Users, UsersRound, LayoutGrid, CreditCard, BadgeCheck, Receipt, RefreshCw, BellPlus, Megaphone, ListChecks, FlaskConical, Activity, Library,
   type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -50,6 +50,9 @@ const SECTIONS: Section[] = [
       { label: "斗內通知", href: "/dashboard/donations/alerts", icon: Bell },
       { label: "斗內進度條", href: "/dashboard/donations", icon: Target },
       { label: "斗內紀錄", href: "/dashboard/donations/records", icon: ScrollText },
+      { label: "斗內影片", href: "/dashboard/donation-video", icon: Clapperboard },
+      { label: "影片審核佇列", href: "/dashboard/donation-video/review", icon: ListChecks },
+      { label: "測試頁面", href: "/dashboard/testing", icon: FlaskConical },
     ],
   },
   {
@@ -63,6 +66,30 @@ const SECTIONS: Section[] = [
       { label: "子熙幣錢包", href: "/dashboard/zixi", icon: Wallet },
       { label: "捐款記錄", href: "/dashboard/zixi/donations", icon: Heart },
       { label: "帳戶設定", href: "/dashboard/account", icon: UserCog },
+    ],
+  },
+  {
+    title: "商務",
+    links: [
+      { label: "周邊商店", href: "/dashboard/commerce", icon: ShoppingBag },
+      { label: "台聚活動", href: "/dashboard/meetups", icon: Users },
+      { label: "共用斗內房間", href: "/dashboard/shared-donation-rooms", icon: UsersRound },
+      { label: "斗內卡牌", href: "/dashboard/donation-cards", icon: LayoutGrid },
+      { label: "金流設定", href: "/dashboard/payment-settings", icon: CreditCard },
+    ],
+  },
+  {
+    title: "會員",
+    links: [
+      { label: "會員中心", href: "/dashboard/membership", icon: BadgeCheck },
+      { label: "用量與點數紀錄", href: "/dashboard/membership/usage", icon: BarChart3 },
+      { label: "付款與發票", href: "/dashboard/membership/billing", icon: Receipt },
+      { label: "訂閱方案", href: "/dashboard/subscription", icon: RefreshCw },
+      { label: "排行榜", href: "/dashboard/leaderboard", icon: Trophy },
+      { label: "頻道數據", href: "/dashboard/stats", icon: Activity },
+      { label: "追隨提醒", href: "/dashboard/follower-alert", icon: BellPlus },
+      { label: "即時比分板", href: "/dashboard/scoreboard", icon: Target },
+      { label: "斗內跑馬燈", href: "/dashboard/donation-ticker", icon: Megaphone },
     ],
   },
 ];
