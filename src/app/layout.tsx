@@ -19,8 +19,27 @@ const CSS_PARTS = [
 ];
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.zixilive.dpdns.org"),
   title: "熾台 CHITAI · 創作者控制中心",
   description: "熾台直播互動工具：斗內進度、聊天室、即時字幕等疊加層設定與 OBS 連結支援。以子熙幣儲值計費。",
+  applicationName: "熾台 CHITAI",
+  authors: [{ name: "熾台 CHITAI" }],
+  openGraph: {
+    type: "website",
+    locale: "zh_TW",
+    url: "https://www.zixilive.dpdns.org",
+    siteName: "熾台 CHITAI",
+    title: "熾台 CHITAI · 創作者控制中心",
+    description: "熾台直播互動工具：斗內進度、聊天室、即時字幕等疊加層設定與 OBS 連結支援。以子熙幣儲值計費。",
+    images: ["/logo.svg"],
+  },
+  twitter: {
+    card: "summary",
+    title: "熾台 CHITAI · 創作者控制中心",
+    description: "熾台直播互動工具：斗內進度、聊天室、即時字幕等疊加層設定與 OBS 連結支援。",
+    images: ["/logo.svg"],
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

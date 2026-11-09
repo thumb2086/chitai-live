@@ -5,6 +5,7 @@ import {
 } from "@/components/ui";
 import { UserCog, LogOut, ShieldCheck, Save } from "lucide-react";
 import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 type User = {
   id: string; name: string; username: string; email: string; avatar: string;
@@ -179,7 +180,8 @@ export default function AccountPage() {
               variant="secondary"
               className="mt-[14px] w-full"
               onClick={async () => {
-                await fetch("https://api.zixilive.dpdns.org/api/auth/logout", { method: "POST" });
+                try { await fetch("https://api.zixilive.dpdns.org/api/auth/logout", { method: "POST" }); } catch {}
+                api.logout();
                 window.location.href = "/";
               }}
             >

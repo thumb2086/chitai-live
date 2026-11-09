@@ -13,7 +13,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
       const qt = q.get("token");
       if (qt) {
         localStorage.setItem("chitai_token", qt);
-        document.cookie = `token=${qt}; path=/; max-age=604800`;
+        document.cookie = `token=${qt}; path=/; max-age=604800; Secure; SameSite=Lax`;
         q.delete("token");
         const clean = `${window.location.pathname}${q.toString() ? "?" + q.toString() : ""}${window.location.hash}`;
         window.history.replaceState(null, "", clean);

@@ -70,6 +70,13 @@ export const api = {
   deleteCommand: (id: string) => req<{ commands: any[] }>("/commands", { method: "POST", body: JSON.stringify({ _meta: "delete", id }) }),
 
   // 抽獎：後端 13 個端點早就有了，但這裡一直沒接（前端缺頁面）。
+
+  /** 登出時清除本機 token（localStorage + cookie）。只打 API 不清本機的話，
+   *  登出後 RequireAuth 仍讀得到舊 token，表現像「登出沒成功」。 */
+  logout: () => {
+    try { localStorage.removeItem("chitai_token"); } catch {}
+    try { document.cookie = "token=; path=/; max-age=0; Secure; SameSite=Lax"; } catch {}
+  },
   //
   // ⚠️ draw / join / clear 的隨機與所有權都在**伺服器端**：
   //    · draw 的隨機數由伺服器產生（前端抽就能重複抽）

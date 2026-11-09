@@ -22,7 +22,8 @@ export default function TopNav() {
   }, []);
 
   const logout = async () => {
-    await fetch("https://api.zixilive.dpdns.org/api/auth/logout", { method: "POST" });
+    try { await fetch("https://api.zixilive.dpdns.org/api/auth/logout", { method: "POST" }); } catch {}
+    api.logout();
     window.location.href = "/";
   };
 

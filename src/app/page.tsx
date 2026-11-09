@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
   Gamepad2, TvMinimalPlay, MessageSquare, Captions, Heart,
-  Terminal, Trophy, Clapperboard, Monitor, Wallet, ArrowRight, Zap,
+  Terminal, Trophy, Clapperboard, Monitor, ArrowRight, Zap,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import AuthModal from "@/components/AuthModal";
+import { PLANS, formatPrice } from "@/lib/plans";
 
 /**
  * 落地頁。
@@ -105,12 +106,15 @@ export default function Home() {
             <strong className="text-[15px] tracking-tight">熾台 CHITAI</strong>
           </span>
           <nav className="hidden items-center gap-6 text-[13px] text-black/60 min-[640px]:flex">
-            <a href="#tools" className="hover:text-black">工具</a>
-            <a href="#suite" className="hover:text-black">工具套件</a>
+            <a href="#tools" className="hover:text-black">產品</a>
+            <a href="#suite" className="hover:text-black">功能</a>
             <a href="#plans" className="hover:text-black">方案</a>
             <a href="#support" className="hover:text-black">支援</a>
           </nav>
-          <a href="https://api.zixilive.dpdns.org/api/auth/youtube" className="rounded-full bg-black px-4 py-2 text-[13px] font-[650] text-white no-underline hover:bg-black/80">使用 Google 開始</a>
+          <span className="flex items-center gap-2">
+            <AuthModal />
+            <a href="https://api.zixilive.dpdns.org/api/auth/youtube" className="rounded-full bg-black px-4 py-2 text-[13px] font-[650] text-white no-underline hover:bg-black/80">使用 Google 開始</a>
+          </span>
         </div>
       </div>
 
@@ -190,6 +194,13 @@ export default function Home() {
             <span>隨時停用沒有合約</span>
             <span>不用重裝 OBS</span>
           </div>
+
+          {/* Livio 式「目前支援的直播來源」：明說平台，不讓人猜 */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-2 text-[12px] text-white/55">
+            <span>目前支援的直播來源</span>
+            <span className="rounded-full border border-white/20 px-3 py-1 text-white/80">YouTube</span>
+            <span className="rounded-full border border-white/20 px-3 py-1 text-white/80">Twitch</span>
+          </div>
         </div>
       </header>
 
@@ -265,42 +276,56 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 計費 ── */}
-      <section id="plans" className="mx-auto max-w-3xl px-5 py-20">
+      {/* ── 計費（子熙幣方案）──────────────────────────────
+          ★ 之前這區只有一張「子熙幣儲值扣點」卡，沒有金額、沒有分級，
+          訪客看不到要花多少、不同方案差在哪裡。
+          現在直接渲染 lib/plans.ts 的 PLANS（Free/Pro/Creator/Studio，
+          ZXC 計價），金額有單一來源，改價只改那一檔。*/}
+      <section id="plans" className="mx-auto max-w-5xl px-5 py-20">
         <h2 className="text-center text-[26px] font-[700] tracking-tight text-[var(--ic-ink)]">
-          計費方式
+          方案
         </h2>
+        <p className="mx-auto mt-3 max-w-[560px] text-center text-[14px] leading-[1.8] text-[var(--ic-ink-muted)]">
+          以子熙幣（ZXC）計價，充值多少用多少。沒有月費、沒有合約，
+          不想用了就不再充值，餘額不會過期作廢。
+        </p>
+
+        <div className="mt-11 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {PLANS.map((p) => (
+            <div
+              key={p.key}
+              className={`rounded-[14px] border p-6 ${
+                p.key === "free"
+                  ? "border-[var(--ic-hairline)] bg-[var(--ic-surface-1)]"
+                  : "border-[var(--ic-hairline-strong)] bg-[var(--ic-surface-1)]"
+              }`}
+              style={{ boxShadow: "0 1px 2px rgba(15,23,42,0.04)" }}
+            >
+              <h3 className="text-[15px] font-[700] tracking-tight text-[var(--ic-ink)]">{p.name}</h3>
+              <p className="mt-2 text-[22px] font-[750] tracking-tight text-[var(--ic-ink)]">
+                {formatPrice(p.monthly)}
+                <span className="ml-1 text-[12px] font-[500] text-[var(--ic-ink-subtle)]">／月</span>
+              </p>
+              <ul className="mt-4 space-y-2 text-[13px] leading-[1.6] text-[var(--ic-ink-muted)]">
+                {p.features.map((f) => (
+                  <li key={f} className="flex gap-2">
+                    <span className="text-[var(--ic-success)]">✓</span>
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
 
         <div
-          className="mt-9 overflow-hidden rounded-[16px] border border-[var(--ic-hairline)] bg-[var(--ic-surface-1)]"
+          className="mt-6 overflow-hidden rounded-[16px] border border-[var(--ic-hairline)] bg-[var(--ic-surface-1)]"
         >
-          <div
-            className="flex items-center gap-4 p-7"
-            style={{ background: "linear-gradient(100deg, rgba(255,107,0,0.08) 0%, rgba(255,107,0,0.02) 100%)" }}
-          >
-            <span
-              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[11px]"
-              style={{ background: "rgba(255,107,0,0.12)", color: ORANGE }}
-            >
-              <Wallet size={21} />
-            </span>
-            <div>
-              <h3 className="text-[17px] font-[700] tracking-tight text-[var(--ic-ink)]">子熙幣儲值扣點</h3>
-              <p className="mt-1.5 text-[14px] leading-[1.85] text-[var(--ic-ink-muted)]">
-                充值多少就用多少，用完再充。
-                <b className="text-[var(--ic-ink)]">沒有月費、沒有方案分級、不綁合約</b>，
-                不想用了就是不再充值，餘額留在那裡。
-              </p>
-            </div>
-          </div>
-
-          {/* ★ 用清單而不是 <ul> 專案原本的風格 ——
-               兩行「免費 / 計點」的可預期性比排版更該被看見。*/}
           <div className="border-t border-[var(--ic-hairline-tertiary)] px-7 py-6">
             <div className="space-y-3 text-[13px] leading-[1.7] text-[var(--ic-ink-muted)]">
               <div className="flex gap-3">
                 <span className="font-[700] text-[#0f9d58]">免費</span>
-                <span>聊天室、即時字幕、直播指令、抽獎、OBS 輸出</span>
+                <span>聊天室、即時字幕、直播指令、抽獎、OBS 輸出（自由方案的公開頁與授權同樣免費）</span>
               </div>
               <div className="flex gap-3">
                 <span className="font-[700]" style={{ color: ORANGE }}>計點</span>
@@ -371,6 +396,11 @@ export default function Home() {
             <div>
               <p className="mb-3 font-[650]">支援</p>
               <p className="mb-2"><a href="mailto:support@zixilive.dpdns.org" className="text-black/55 no-underline hover:text-black">聯絡我們</a></p>
+            </div>
+            <div>
+              <p className="mb-3 font-[650]">法律</p>
+              <p className="mb-2"><a href="/privacy" className="text-black/55 no-underline hover:text-black">隱私權政策</a></p>
+              <p className="mb-2"><a href="/terms" className="text-black/55 no-underline hover:text-black">服務條款</a></p>
             </div>
           </div>
         </div>
