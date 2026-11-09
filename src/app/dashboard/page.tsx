@@ -87,9 +87,9 @@ export default function DashboardPage() {
           user: u,
           conn: c,
           don,
-          commands: cmd?.commands ?? [],
-          obs: (obs as any).sources ?? [],
-          giveaways: gw?.giveaways ?? [],
+          commands: (cmd as any)?.commands ?? (cmd as any)?.data?.commands ?? [],
+          obs: (obs as any).sources ?? (obs as any).data?.sources ?? [],
+          giveaways: (gw as any)?.giveaways ?? (gw as any)?.data?.giveaways ?? [],
         });
       })
       .finally(() => setLoading(false));

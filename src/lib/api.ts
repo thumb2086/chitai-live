@@ -15,7 +15,14 @@ async function req<T>(url: string, init?: RequestInit): Promise<T> {
     throw Object.assign(new Error("Unauthorized"), { status: 401 });
   }
   if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
-  return res.json();
+  const json = await res.json();
+  // Worker API wraps payloads as { success, data }; legacy dashboard code
+  // expects the bare payload (e.g. user.name, obs.sources). Unwrap once so
+  // pages do not read undefined fields off the envelope.
+  if (json && typeof json === "object" && "data" in json && "success" in json) {
+    return (json as any).data;
+  }
+  return json;
 }
 
 export const api = {

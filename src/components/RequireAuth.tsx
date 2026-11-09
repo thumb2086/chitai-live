@@ -20,8 +20,9 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
       }
     } catch {}
     const token = localStorage.getItem("chitai_token") || (document.cookie.match(/token=([^;]+)/)?.[1] ?? "");
+    if (!token) { router.replace("/"); return; }
     fetch("https://api.zixilive.dpdns.org/api/v1/user", {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => { if (r.ok) setOk(true); else router.replace("/"); })
       .catch(() => router.replace("/"));

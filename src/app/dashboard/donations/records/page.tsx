@@ -38,9 +38,10 @@ export default function DonationRecordsPage() {
       const qs = new URLSearchParams();
       if (range) qs.set("since", new Date(Date.now() - Number(range) * 864e5).toISOString());
       if (source) qs.set("source", source);
-      return fetch(`https://api.zixilive.dpdns.org/api/v1/donation-records?${qs}`).then((r) => {
+      return fetch(`https://api.zixilive.dpdns.org/api/v1/donation-records?${qs}`).then(async (r) => {
         if (!r.ok) throw new Error("載入失敗");
-        return r.json();
+        const j = await r.json();
+        return j?.data ?? j;
       });
     },
     [range, source]

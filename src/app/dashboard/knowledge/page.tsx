@@ -205,7 +205,7 @@ export default function KnowledgePage() {
     setAnswer(null);
     try {
       const r = await api.ragSearch(query.trim());
-      setHits(r.results);
+      setHits(r.results || []);
     } catch (e) {
       setErr(`檢索失敗：${(e as Error).message}`);
     } finally {
@@ -219,8 +219,8 @@ export default function KnowledgePage() {
     setErr("");
     try {
       const r = await api.ragAsk(query.trim());
-      setAnswer(r);
-      setHits(r.sources);
+      setAnswer({ ...r, sources: r.sources || [] });
+      setHits(r.sources || []);
     } catch (e) {
       setErr(`問答失敗：${(e as Error).message}`);
     } finally {
@@ -228,7 +228,7 @@ export default function KnowledgePage() {
     }
   };
 
-  const pending = stats ? stats.captionSegments - stats.total : 0;
+  const pending = stats ? (stats.captionSegments ?? 0) - (stats.total ?? 0) : 0;
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "28px 20px 64px" }}>
@@ -309,7 +309,7 @@ export default function KnowledgePage() {
                 <span style={{ fontSize: 12, fontWeight: 500, marginLeft: 5, color: "var(--ic-ink-muted)" }}>筆</span>
               </div>
             </div>
-            {stats && stats.byType.length > 0 && (
+            {stats && (stats.byType?.length ?? 0) > 0 && (
               <div>
                 <div style={{ color: "var(--ic-ink-muted)", marginBottom: 3 }}>來源</div>
                 <div style={{ fontSize: 13, lineHeight: 1.7 }}>

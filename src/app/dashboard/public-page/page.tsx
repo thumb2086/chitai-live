@@ -20,7 +20,7 @@ export default function PublicPage() {
   useEffect(() => {
     fetch("https://api.zixilive.dpdns.org/api/v1/stats")
       .then((r) => (r.ok ? r.json() : null))
-      .then((s) => setLive(s))
+      .then((s) => setLive(s?.data ?? s))
       .catch(() => setLive({ connections: [] }));
   }, []);
 
@@ -102,14 +102,14 @@ export default function PublicPage() {
           <div className="mb-4 grid gap-3">
             <div className="grid gap-1">
               <span className="text-[12px] font-[500] text-[var(--ic-ink-muted)]">顯示名稱</span>
-              <input value={state.name} onChange={e => update({ name: e.target.value })}
+              <input value={state.name ?? ""} onChange={e => update({ name: e.target.value })}
                 className="rounded-[var(--ic-radius-md)] border border-[var(--ic-hairline)] bg-[var(--ic-surface-1)] px-3 py-2.5 text-[14px] text-[var(--ic-ink)] outline-none focus:border-[var(--ic-fin-orange)]" />
             </div>
             <div className="grid gap-1">
               <span className="text-[12px] font-[500] text-[var(--ic-ink-muted)]">使用者名稱</span>
               <div className="flex items-center gap-2">
                 <span className="text-[14px] text-[var(--ic-ink-muted)]">@</span>
-                <input value={state.username} onChange={e => update({ username: e.target.value.replace(/\s/g, "") })}
+                <input value={state.username ?? ""} onChange={e => update({ username: e.target.value.replace(/\s/g, "") })}
                   className="flex-1 rounded-[var(--ic-radius-md)] border border-[var(--ic-hairline)] bg-[var(--ic-surface-1)] px-3 py-2.5 text-[14px] text-[var(--ic-ink)] outline-none focus:border-[var(--ic-fin-orange)]" />
               </div>
             </div>

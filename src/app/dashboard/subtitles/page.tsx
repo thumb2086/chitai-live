@@ -640,8 +640,9 @@ function CaptionsPreview({
   useEffect(() => {
     fetch("https://api.zixilive.dpdns.org/api/v1/obs")
       .then((r) => r.json())
-      .then((d) => {
-        const s = (d.sources ?? []).find((x: any) => x.key === "captions");
+      .then((raw) => {
+        const d = raw?.data ?? raw;
+        const s = (d?.sources ?? []).find((x: any) => x.key === "captions");
         if (s) setUrl(s.url);
       })
       .catch(() => {});

@@ -93,7 +93,8 @@ function LiveViewersInner() {
     try {
       const res = await fetch("https://api.zixilive.dpdns.org/api/v1/live-viewers");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setLive(await res.json());
+      const j = await res.json();
+      setLive(j?.data ?? j);
     } catch (e: any) {
       setError(`讀取觀看人數失敗：${e?.message || e}`);
     }

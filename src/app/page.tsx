@@ -79,6 +79,9 @@ export default function Home() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    let hasToken = false;
+    try { hasToken = !!(localStorage.getItem("chitai_token") || document.cookie.match(/token=([^;]+)/)?.[1]); } catch {}
+    if (!hasToken) { setChecking(false); return; }
     api.getUser()
       .then((u) => { if (u?.id) window.location.href = "/dashboard"; })
       .catch(() => {})
@@ -107,7 +110,7 @@ export default function Home() {
             <a href="#plans" className="hover:text-black">方案</a>
             <a href="#support" className="hover:text-black">支援</a>
           </nav>
-          <a href="https://api.zixilive.dpdns.org/api/auth/youtube" className="rounded-full bg-black px-4 py-2 text-[13px] font-[650] text-white no-underline hover:bg-black/80">開啟控制台</a>
+          <a href="https://api.zixilive.dpdns.org/api/auth/youtube" className="rounded-full bg-black px-4 py-2 text-[13px] font-[650] text-white no-underline hover:bg-black/80">使用 Google 開始</a>
         </div>
       </div>
 
@@ -330,18 +333,18 @@ export default function Home() {
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
           <a
-            href="https://api.zixilive.dpdns.org/api/auth/twitch"
-            className="inline-flex items-center gap-2 rounded-[12px] px-7 py-3.5 text-[15px] font-[650] text-white no-underline transition-all hover:brightness-110"
-            style={{ background: "#9146ff" }}
-          >
-            <Gamepad2 size={18} /> Twitch 登入 <ArrowRight size={16} />
-          </a>
-          <a
             href="https://api.zixilive.dpdns.org/api/auth/youtube"
             className="inline-flex items-center gap-2 rounded-[12px] px-7 py-3.5 text-[15px] font-[650] text-[#111] no-underline transition-all hover:brightness-95"
             style={{ background: "#fff" }}
           >
             <TvMinimalPlay size={18} style={{ color: "#ff0033" }} /> Google 登入 <ArrowRight size={16} />
+          </a>
+          <a
+            href="https://api.zixilive.dpdns.org/api/auth/twitch"
+            className="inline-flex items-center gap-2 rounded-[12px] px-7 py-3.5 text-[15px] font-[650] text-white no-underline transition-all hover:brightness-110"
+            style={{ background: "#9146ff" }}
+          >
+            <Gamepad2 size={18} /> Twitch 登入 <ArrowRight size={16} />
           </a>
         </div>
         <p className="mt-10 text-[12px] text-white/30">熾台 CHITAI · 直播互動工具</p>
@@ -362,8 +365,8 @@ export default function Home() {
             </div>
             <div>
               <p className="mb-3 font-[650]">資源</p>
-              <p className="mb-2"><a href="/dashboard/replay-analysis" className="text-black/55 no-underline hover:text-black">回放分析</a></p>
-              <p className="mb-2"><a href="/dashboard/commands" className="text-black/55 no-underline hover:text-black">直播指令</a></p>
+              <p className="mb-2"><a href="#tools" className="text-black/55 no-underline hover:text-black">工具</a></p>
+              <p className="mb-2"><a href="#plans" className="text-black/55 no-underline hover:text-black">方案</a></p>
             </div>
             <div>
               <p className="mb-3 font-[650]">支援</p>

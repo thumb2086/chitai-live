@@ -45,7 +45,31 @@ CIRCUIT_BREAKER_RESET_MS = "30000"
 
 [env.production]
 name = "chitai-live-api"
-vars = { ENVIRONMENT = "production" }
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "chitai-live"
+database_id = "68a121de-5a7f-4ab4-b08c-216af1a57f8c"
+
+[[env.production.kv_namespaces]]
+binding = "KV"
+id = "8c2d769d055c4e45b516a125865fa214"
+preview_id = "3bd5193cc4d54556b42619862c720aef"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+JWT_ISSUER = "zixi-ecosystem"
+JWT_AUDIENCE = "zixi-services"
+ZIXI_EARTH_URL = "https://zixiearth.dpdns.org"
+GROQ_ROUTER_URL = "https://groq.zixilive.dpdns.org"
+CHITAI_API_URL = "https://api.zixilive.dpdns.org"
+ENABLE_CROSS_SERVICE_CACHE = "true"
+ENABLE_DISTRIBUTED_TRACING = "true"
+ENABLE_CIRCUIT_BREAKER = "true"
+ENABLE_REQUEST_DEDUPLICATION = "true"
+SERVICE_REGISTRY_URL = "https://api.zixilive.dpdns.org/.well-known/services.json"
+CIRCUIT_BREAKER_THRESHOLD = "5"
+CIRCUIT_BREAKER_RESET_MS = "30000"
 
 [env.preview]
 name = "chitai-live-api-preview"

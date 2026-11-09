@@ -14,7 +14,7 @@ export default function DonationAlertsPage() {
 
   useEffect(() => {
     setOrigin(window.location.origin);
-    Promise.all([api.getOBS(), api.getUser()]).then(([o, u]) => { setObsSources(o.sources); setUserName(u.username || ""); }).catch(() => {});
+    Promise.all([api.getOBS(), api.getUser()]).then(([o, u]) => { setObsSources(o?.sources || (o as any)?.data?.sources || []); setUserName((u as any)?.username || (u as any)?.data?.username || ""); }).catch(() => {});
   }, []);
 
   // Two mistakes here, both confirmed against the backing code:
@@ -23,7 +23,7 @@ export default function DonationAlertsPage() {
   //   "alerts" -- "alerts" is its route *path*. Either way url stayed null, the
   //   複製網址 button below never rendered, and the page always told the user to
   //   go enable the source in OBS even when it was already enabled.
-  const alertSource = obsSources.find((s: any) => s.key === "donation-alert");
+  const alertSource = (obsSources || []).find((s: any) => s.key === "donation-alert");
   // The API already returns an absolute url; prefer it over rebuilding by hand.
   const url: string | null = alertSource?.url ?? null;
 

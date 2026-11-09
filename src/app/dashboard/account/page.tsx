@@ -18,12 +18,20 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
 
+  const authHeaders = (): Record<string, string> => {
+    try {
+      const t = localStorage.getItem("chitai_token") || (document.cookie.match(/token=([^;]+)/)?.[1] ?? "");
+      return t ? { Authorization: `Bearer ${t}` } : {};
+    } catch { return {}; }
+  };
+
   const load = async () => {
     try {
-      const r = await fetch("https://api.zixilive.dpdns.org/api/v1/user");
+      const r = await fetch("https://api.zixilive.dpdns.org/api/v1/user", { headers: authHeaders() });
       if (!r.ok) throw new Error("無法載入帳戶資料");
-      const u = await r.json();
-      setUser(u);
+      const j = await r.json();
+      const u = j?.data ?? j;
+      setUser({ ...u, id: String(u?.id ?? ""), createdAt: u?.created_at ?? u?.createdAt ?? "" });
     } catch (e: any) {
       setMsg({ tone: "err", text: e?.message || "載入失敗" });
     } finally {
@@ -40,13 +48,14 @@ export default function AccountPage() {
     setSaving(true); setMsg(null);
     try {
       const res = await fetch("https://api.zixilive.dpdns.org/api/v1/user", {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
+        method: "PATCH", headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ name: v.name, username: v.username, avatar: v.avatar, demoMode: v.demoMode, publicPage: v.publicPage }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j.error || `儲存失敗 (${res.status})`);
+      const saved = j?.data ?? j;
       setForm({});
-      setUser(j);
+      setUser({ ...saved, id: String(saved?.id ?? user?.id ?? ""), createdAt: saved?.created_at ?? saved?.createdAt ?? user?.createdAt ?? "" });
       setMsg({ tone: "ok", text: "帳戶設定已更新" });
     } catch (e: any) {
       setMsg({ tone: "err", text: e?.message || "儲存失敗" });
@@ -91,14 +100,14 @@ export default function AccountPage() {
                 )}
                 <div className="min-w-0 flex-1">
                   <Field label="頭像網址">
-                    <Input value={v.avatar} onChange={(e) => set("avatar", e.target.value)} placeholder="https://…" />
+                    <Input value={v.avatar ?? ""} onChange={(e) => set("avatar", e.target.value)} placeholder="https://…" />
                   </Field>
                 </div>
               </div>
 
               <div className="grid gap-[16px] sm:grid-cols-2">
                 <Field label="顯示名稱" hint="會顯示在公開斗內頁與疊加層。">
-                  <Input value={v.name} onChange={(e) => set("name", e.target.value)} />
+                  <Input value={v.name ?? ""} onChange={(e) => set("name", e.target.value)} />
                 </Field>
                 <Field label="使用者名稱" hint="公開頁網址為 /@<使用者名稱>，建立後更改次數有限。">
                   <div className="flex items-center">
@@ -106,7 +115,7 @@ export default function AccountPage() {
                       @
                     </span>
                     <Input
-                      value={v.username}
+                      value={v.username ?? ""}
                       onChange={(e) => set("username", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                       className="rounded-l-none"
                     />

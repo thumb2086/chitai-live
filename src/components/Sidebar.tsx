@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import {
   Globe, Cable, Clapperboard, UserCog, Monitor,
   Bell, ScrollText, Target, Trophy,
-  MessageSquare, Captions, Terminal,
+  MessageSquare, Captions, Terminal, BarChart3,
   Wallet, Heart, Library,
   type LucideIcon,
 } from "lucide-react";
@@ -36,6 +36,7 @@ const SECTIONS: Section[] = [
     title: "直播中",
     links: [
       { label: "聊天室", href: "/dashboard/chat", icon: MessageSquare },
+      { label: "同時觀看人數", href: "/dashboard/live-viewers", icon: BarChart3 },
       { label: "即時字幕", href: "/dashboard/subtitles", icon: Captions },
       { label: "直播指令", href: "/dashboard/commands", icon: Terminal },
       // ★ 抽獎本來就有頁面，但從來沒出現在選單裡 ——
@@ -97,9 +98,12 @@ const [user, setUser] = useState<{
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    api.getUser()
-      .then((u) => setUser((prev) => ({ ...prev, name: u?.name, avatar: u?.avatar })))
-      .catch(() => {});
+    const t0 = (() => { try { return localStorage.getItem("chitai_token") || (document.cookie.match(/token=([^;]+)/)?.[1] ?? ""); } catch { return ""; } })();
+    if (t0) {
+      api.getUser()
+        .then((u) => setUser((prev) => ({ ...prev, name: u?.name, avatar: u?.avatar })))
+        .catch(() => {});
+    }
 
     // ★ 原本這裡抓 /api/v1/membership，顯示「方案名 + 字幕分鐘數」。
     //   會員制在 2026-10-14 砍掉了，那三行（FREE／0/120／新制點數尚未啟用）
@@ -115,7 +119,8 @@ const [user, setUser] = useState<{
       body: JSON.stringify({ action: "wallet-summary" }),
     })
       .then((r) => (r.ok ? r.json() : null))
-      .then((w) => {
+      .then((raw) => {
+        const w = raw?.data ?? raw;
         if (!w) return;
         if (w.connected === false) {
           setWallet({ state: "disconnected" });

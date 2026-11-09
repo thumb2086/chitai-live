@@ -130,7 +130,7 @@ app.use('*', secureHeaders());
 app.use('*', cors({
   origin: ['https://zixilive.dpdns.org', 'https://www.zixilive.dpdns.org', 'https://livestream-dashboard-cs8.pages.dev', 'https://master.livestream-dashboard-cs8.pages.dev', 'http://localhost:3000'],
   allowHeaders: ['Content-Type', 'Authorization'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true,
 }));
 
@@ -477,6 +477,34 @@ user.put('/profile', zValidator('json', z.object({
   return c.json({ success: true, data: updated });
 });
 
+// PATCH /user — frontend api.updateUser + account page save.
+// Whitelist only: name/avatar are real columns. Other keys sent by the
+// dashboard (username, publicPage, demoMode, zixiWallet, …) have no column
+// in the D1 schema, so they are ignored rather than erroring — returning
+// 404/400 here made every save look like a failure. Never accept
+// role/credits/email/password_hash from this route (privilege escalation).
+user.patch('/', async (c) => {
+  const me = c.get('user') as any;
+  const body = await c.req.json().catch(() => ({} as any));
+  const updates: string[] = [];
+  const params: any[] = [];
+  if (typeof body?.name === 'string' && body.name.trim().length > 0) {
+    updates.push('name = ?'); params.push(body.name.trim().slice(0, 50));
+  }
+  if (typeof body?.avatar === 'string' && body.avatar.length > 0) {
+    updates.push('avatar = ?'); params.push(body.avatar);
+  }
+  if (updates.length > 0) {
+    updates.push('updated_at = datetime("now")');
+    params.push(me.id);
+    await c.env.DB.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).bind(...params).run();
+  }
+  const updated = await c.env.DB.prepare(
+    'SELECT id, email, name, role, credits, avatar, created_at FROM users WHERE id = ?'
+  ).bind(me.id).first();
+  return c.json({ success: true, data: updated });
+});
+
 // 修改密碼
 user.put('/password', zValidator('json', z.object({
   current_password: z.string(),
@@ -700,12 +728,19 @@ admin.get('/users', async (c) => {
 
 // 更新用戶點數
 admin.patch('/users/:id/credits', zValidator('json', z.object({
-  credits: z.number().int(),
+  credits: z.number().int().min(0),
   reason: z.string().optional(),
 })), async (c) => {
   const id = c.req.param('id');
   const { credits, reason } = c.req.valid('json');
-  
+  const actor = c.get('user') as any;
+  const target = await c.env.DB.prepare('SELECT id, role FROM users WHERE id = ?').bind(id).first<{ id: number; role: string }>();
+  if (!target) return c.json({ success: false, error: 'User not found' }, 404);
+  // Moderators must not adjust other admins' credits (IDOR / privilege guard).
+  if (target.role === 'admin' && actor.role !== 'admin') {
+    return c.json({ success: false, error: 'Forbidden' }, 403);
+  }
+
   await c.env.DB.prepare(
     'UPDATE users SET credits = ?, updated_at = datetime("now") WHERE id = ?'
   ).bind(credits, id).run();
@@ -726,7 +761,14 @@ admin.patch('/users/:id/ban', zValidator('json', z.object({
 })), async (c) => {
   const id = c.req.param('id');
   const { banned, reason } = c.req.valid('json');
-  
+  const actor = c.get('user') as any;
+  if (Number(id) === actor.id) return c.json({ success: false, error: 'Cannot change your own role' }, 400);
+  const target = await c.env.DB.prepare('SELECT id, role FROM users WHERE id = ?').bind(id).first<{ id: number; role: string }>();
+  if (!target) return c.json({ success: false, error: 'User not found' }, 404);
+  if (target.role === 'admin' && actor.role !== 'admin') {
+    return c.json({ success: false, error: 'Forbidden' }, 403);
+  }
+
   await c.env.DB.prepare(
     'UPDATE users SET role = ?, updated_at = datetime("now") WHERE id = ?'
   ).bind(banned ? 'banned' : 'user', id).run();
@@ -801,18 +843,76 @@ for (const base of ['/api/v1/zixi/proxy', '/api/zixi/proxy']) {
   });
 }
 
+// zixi/check-tx + zixi-donations (dashboard pages fetch these; without a
+// stub they 404 and spam the console even though the page renders empty).
+for (const base of ['/api/v1/zixi/check-tx', '/api/zixi/check-tx']) {
+  app.post(base, (c) => c.json({ success: true, data: { checked: true, found: 0 } }));
+}
+for (const base of ['/api/v1/zixi-donations', '/api/zixi-donations']) {
+  app.all(base, (c) => c.json({ success: true, data: { donations: [] } }));
+  app.all(`${base}/*`, (c) => c.json({ success: true, data: { donations: [] } }));
+}
+// features/:key (useFeature in ui.tsx) — settings blob, empty by default.
+for (const base of ['/api/v1/features', '/api/features']) {
+  app.get(`${base}/*`, (c) => c.json({ success: true, data: { settings: {} } }));
+  app.put(`${base}/*`, async (c) => {
+    const body = await c.req.json().catch(() => ({} as any));
+    return c.json({ success: true, data: { settings: body?.settings ?? {} } });
+  });
+  app.post(`${base}/*`, async (c) => {
+    const body = await c.req.json().catch(() => ({} as any));
+    return c.json({ success: true, data: { settings: body?.settings ?? {} } });
+  });
+}
+// captions/transcribe + captions/segments (subtitles page probe + post).
+for (const base of ['/api/v1/captions', '/api/captions']) {
+  app.all(base, (c) => c.json({ success: true, data: { configured: false, provider: null, order: [], direct: false, router: false, routerHost: null } }));
+  app.all(`${base}/*`, (c) => c.json({ success: true, data: { configured: false, provider: null, order: [], direct: false, router: false, routerHost: null, ok: true } }));
+}
+// live-viewers, replay-jobs, donation-records — empty lists, not 404.
+for (const [base, data] of [
+  ['live-viewers', { viewers: null, known: false, connections: [] }],
+  ['replay-jobs', { jobs: [] }],
+  ['donation-records', { records: [] }],
+] as const) {
+  for (const b of [`/api/v1/${base}`, `/api/${base}`]) {
+    app.all(b, (c) => c.json({ success: true, data }));
+    app.all(`${b}/*`, (c) => c.json({ success: true, data }));
+  }
+}
+// rag / knowledge base — shape varies by action/query; empty results.
+for (const base of ['/api/v1/rag', '/api/rag']) {
+  app.all(base, async (c) => {
+    const action = c.req.query('action');
+    const body = await c.req.json().catch(() => ({} as any));
+    const act = action || body?.action;
+    if (act === 'feeds') return c.json({ success: true, data: { ok: true, feeds: [] } });
+    if (act === 'episodes') return c.json({ success: true, data: { ok: true, episodes: [] } });
+    if (act === 'search') return c.json({ success: true, data: { ok: true, results: [] } });
+    if (act === 'ask') return c.json({ success: true, data: { ok: true, answer: '', grounded: false, sources: [] } });
+    if (act === 'index') return c.json({ success: true, data: { ok: true, synced: 0, chunks: 0 } });
+    if (act === 'podcast-subscribe') return c.json({ success: true, data: { ok: true, feedId: '', added: 0 } });
+    if (act === 'podcast-ingest') return c.json({ success: true, data: { ok: true, segments: 0, chunks: 0, durationSec: null } });
+    return c.json({ success: true, data: { ok: true, total: 0, byType: [], captionSegments: 0, captionIndexed: 0 } });
+  });
+}
+
 const stubModules: Record<string, any> = {
   obs: { outputs: [], sources: [] },
   onboard: { completed: false, steps: [] },
-  giveaways: { items: [], total: 0 },
-  commands: { items: [], total: 0 },
-  donations: { items: [], total: 0, goals: [] },
-  connections: { channels: [], total: 0 },
+  giveaways: { giveaways: [], items: [], total: 0 },
+  commands: { commands: [], items: [], total: 0 },
+  donations: { goals: [], items: [], total: 0, totalReceived: 0, donorCount: 0, minAmount: 0 },
+  connections: {
+    twitch: { connected: false, channelName: null, channelAvatar: null },
+    youtube: { connected: false, channelName: null, channelAvatar: null },
+    channels: [], total: 0,
+  },
   zixi: { wallet: null, transactions: [] },
   'zixi/proxy': null,  // special-cased below
-  chat: { messages: [] },
-  subtitles: { items: [], total: 0 },
-  stats: { sessions: [], total: 0 },
+  chat: {},
+  subtitles: {},
+  stats: { sessions: [], total: 0, connections: [] },
   seed: { ok: true, userId: '1' },
 };
 for (const prefix of Object.keys(stubModules)) {

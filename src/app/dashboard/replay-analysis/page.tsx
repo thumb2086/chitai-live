@@ -61,9 +61,10 @@ export default function ReplayAnalysisPage() {
   const [err, setErr] = useState<string | null>(null);
 
   const { data, loading, error, reload } = useAsync<{ jobs: Job[] }>(
-    () => fetch("https://api.zixilive.dpdns.org/api/v1/replay-jobs").then((r) => {
+    () => fetch("https://api.zixilive.dpdns.org/api/v1/replay-jobs").then(async (r) => {
       if (!r.ok) throw new Error("載入失敗");
-      return r.json();
+      const j = await r.json();
+      return j?.data ?? j;
     }),
     []
   );

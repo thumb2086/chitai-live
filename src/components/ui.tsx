@@ -358,7 +358,8 @@ export function useFeature<T extends Record<string, unknown>>(featureKey: string
     let alive = true;
     fetch(`https://api.zixilive.dpdns.org/api/v1/features/${featureKey}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
+      .then((raw) => {
+        const d = raw?.data ?? raw;
         if (alive) setValue({ ...defaults, ...(d?.settings ?? {}) });
       })
       .catch(() => {})
