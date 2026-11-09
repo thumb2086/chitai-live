@@ -788,6 +788,19 @@ app.onError((err, c) => {
 
 // ========== Legacy dashboard module stubs (return empty state, not 404) ==========
 // These keep the static-export dashboard quiet while the real modules are migrated.
+// Real wallet summary (Sidebar member-points ribbon)
+for (const base of ['/api/v1/zixi/proxy', '/api/zixi/proxy']) {
+  app.post(base, authMiddleware, async (c) => {
+    const user = c.get('user') as any;
+    const body = await c.req.json().catch(() => ({}));
+    if (body?.action === 'wallet-summary') {
+      const u = await c.env.DB.prepare('SELECT id, email, name, credits, role FROM users WHERE id = ?').bind(user.id).first();
+      return c.json({ success: true, data: { connected: true, balances: { ZXC: u ? Number((u as any).credits || 0) : 0, YJC: 0 }, email: user.email } });
+    }
+    return c.json({ success: true, data: { connected: false } });
+  });
+}
+
 const stubModules: Record<string, any> = {
   obs: { outputs: [], sources: [] },
   onboard: { completed: false, steps: [] },
@@ -796,6 +809,7 @@ const stubModules: Record<string, any> = {
   donations: { items: [], total: 0, goals: [] },
   connections: { channels: [], total: 0 },
   zixi: { wallet: null, transactions: [] },
+  'zixi/proxy': null,  // special-cased below
   chat: { messages: [] },
   subtitles: { items: [], total: 0 },
   seed: { ok: true, userId: '1' },

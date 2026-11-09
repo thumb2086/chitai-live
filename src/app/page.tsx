@@ -140,20 +140,22 @@ export default function Home() {
             計費以<b style={{ color: ORANGE }}>子熙幣</b>儲值扣點，沒有月費、不綁方案。
           </p>
 
+          
+
           <div className="mt-9 flex w-full max-w-[380px] flex-col gap-3">
+            <a
+              href="https://api.zixilive.dpdns.org/api/auth/youtube"
+              className="flex items-center justify-center gap-3 rounded-[12px] px-6 py-4 text-[16px] font-[750] text-[#111] no-underline transition-all hover:shadow-lg hover:brightness-105"
+              style={{ background: "#fff" }}
+            >
+              <TvMinimalPlay size={22} style={{ color: "#ff0033" }} /> 使用 Google 帳號開始
+            </a>
             <a
               href="https://api.zixilive.dpdns.org/api/auth/twitch"
               className="flex items-center justify-center gap-3 rounded-[12px] px-6 py-3.5 text-[15px] font-[650] text-white no-underline transition-all hover:brightness-110"
               style={{ background: "#9146ff" }}
             >
               <Gamepad2 size={20} /> 使用 Twitch 帳號開始
-            </a>
-            <a
-              href="https://api.zixilive.dpdns.org/api/auth/youtube"
-              className="flex items-center justify-center gap-3 rounded-[12px] px-6 py-3.5 text-[15px] font-[650] text-[#111] no-underline transition-all hover:brightness-95"
-              style={{ background: "#fff" }}
-            >
-              <TvMinimalPlay size={20} style={{ color: "#ff0033" }} /> 使用 Google 帳號開始
             </a>
           </div>
 

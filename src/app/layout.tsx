@@ -8,14 +8,14 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 // ~800KB, split so no single stylesheet is large enough for the browser to
 // silently truncate it.
 const CSS_PARTS = [
-  "/css/dashboard.00.css",
-  "/css/dashboard.01.css",
-  "/css/dashboard.02.css",
-  "/css/dashboard.03.css",
-  "/css/dashboard.04.css",
-  "/css/dashboard.05.css",
-  "/css/dashboard.06.css",
-  "/css/dashboard.07.css",
+  "/css/dashboard.00.css?v=20261109",
+  "/css/dashboard.01.css?v=20261109",
+  "/css/dashboard.02.css?v=20261109",
+  "/css/dashboard.03.css?v=20261109",
+  "/css/dashboard.04.css?v=20261109",
+  "/css/dashboard.05.css?v=20261109",
+  "/css/dashboard.06.css?v=20261109",
+  "/css/dashboard.07.css?v=20261109",
 ];
 
 export const metadata: Metadata = {
