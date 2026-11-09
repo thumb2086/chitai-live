@@ -8,11 +8,14 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   const router = useRouter();
 
   useEffect(() => {
-    fetch("https://api.zixilive.dpdns.org/api/v1/user")
+    const token = localStorage.getItem("chitai_token") || (document.cookie.match(/token=([^;]+)/)?.[1] ?? "");
+    fetch("https://api.zixilive.dpdns.org/api/v1/user", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then(r => { if (r.ok) setOk(true); else router.replace("/"); })
       .catch(() => router.replace("/"));
   }, []);
 
-  if (!ok) return <div className="flex min-h-screen items-center justify-center bg-[var(--ic-canvas)] text-[14px] text-[var(--ic-ink-muted)]">驗證中...</div>;
+  if (!ok) return <div className="flex min-h-screen items-center justify-center bg-[var(--ic-canvas)] text-[14px] text-[var(--ic-ink-muted)]">檢查登入中…</div>;
   return <>{children}</>;
 }

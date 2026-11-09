@@ -7,6 +7,7 @@ import {
   Terminal, Trophy, Clapperboard, Monitor, Wallet, ArrowRight, Zap,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import AuthModal from "@/components/AuthModal";
 
 /**
  * 落地頁。
@@ -154,6 +155,10 @@ export default function Home() {
             >
               <TvMinimalPlay size={20} style={{ color: "#ff0033" }} /> 使用 Google 帳號開始
             </a>
+          </div>
+
+          <div className="mt-6 flex w-full max-w-[380px] justify-center">
+            <AuthModal />
           </div>
 
           {/* ★ 三個小標記取代原本那行小字 ——

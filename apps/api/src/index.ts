@@ -128,7 +128,7 @@ const app = new Hono<{ Bindings: Env }>();
 app.use('*', logger());
 app.use('*', secureHeaders());
 app.use('*', cors({
-  origin: ['https://zixilive.dpdns.org', 'https://master.livestream-dashboard-cs8.pages.dev', 'http://localhost:3000'],
+  origin: ['https://zixilive.dpdns.org', 'https://www.zixilive.dpdns.org', 'https://livestream-dashboard-cs8.pages.dev', 'https://master.livestream-dashboard-cs8.pages.dev', 'http://localhost:3000'],
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
@@ -366,6 +366,7 @@ auth.get('/callback', async (c) => {
 });
 
 app.route('/api/auth', auth);
+app.route('/api/v1/auth', auth);
 
 // ========== 受保護路由中介軟體 ==========
 const authMiddleware = async (c: any, next: any) => {
@@ -380,6 +381,12 @@ const authMiddleware = async (c: any, next: any) => {
 // ========== 用戶資料路由 ==========
 const user = new Hono<{ Bindings: Env }>();
 user.use('*', authMiddleware);
+
+// Get current user profile (frontend api.getUser + RequireAuth)
+user.get('/', async (c) => {
+  const me = c.get('user') as any;
+  return c.json({ success: true, data: { id: me.id, email: me.email, name: me.name, role: me.role, credits: me.credits, avatar: me.avatar, created_at: me.created_at } });
+});
 
 // 更新個人資料
 user.put('/profile', zValidator('json', z.object({
@@ -437,6 +444,7 @@ user.put('/password', zValidator('json', z.object({
 });
 
 app.route('/api/user', user);
+app.route('/api/v1/user', user);
 
 // ========== 直播相關路由 ==========
 const streams = new Hono<{ Bindings: Env }>();
@@ -537,6 +545,7 @@ streams.patch('/:id/status', authMiddleware, zValidator('json', z.object({
 });
 
 app.route('/api/streams', streams);
+app.route('/api/v1/streams', streams);
 
 // ========== 聊天/訊息路由 ==========
 const messages = new Hono<{ Bindings: Env }>();
@@ -597,6 +606,7 @@ messages.post('/stream/:streamId', authMiddleware, zValidator('json', z.object({
 });
 
 app.route('/api/messages', messages);
+app.route('/api/v1/messages', messages);
 
 // ========== 管理員路由 ==========
 const admin = new Hono<{ Bindings: Env }>();
@@ -673,6 +683,7 @@ admin.patch('/users/:id/ban', zValidator('json', z.object({
 });
 
 app.route('/api/admin', admin);
+app.route('/api/v1/admin', admin);
 
 // ========== 錯誤處理 ==========
 app.get('/.well-known/services.json', (c) => {
