@@ -453,6 +453,7 @@ app.get('/api/v1/user/by-username/:username', async (c) => {
 });
 
 const user = new Hono<{ Bindings: Env }>();
+user.use('*', authMiddleware);
 // Public profile lookup must be registered before auth middleware
 user.get('/', async (c) => {
   const me = c.get('user') as any;
@@ -928,6 +929,16 @@ const stubModules: Record<string, any> = {
   subtitles: {},
   stats: { sessions: [], total: 0, connections: [] },
   seed: { ok: true, userId: '1' },
+  commerce: { products: [], items: [], total: 0 },
+  'donation-videos': { items: [], videos: [], total: 0 },
+  meetups: { items: [], meetups: [], total: 0 },
+  membership: { members: [], items: [], total: 0 },
+  'payment-settings': { providers: [], settings: {} },
+  leaderboard: { entries: [], items: [], total: 0 },
+  eventsub: { events: [], items: [] },
+  'overlay-data': { data: null, items: [] },
+  captions: { items: [], segments: [], total: 0 },
+  'features': {},
 };
 for (const prefix of Object.keys(stubModules)) {
   for (const base of [`/api/v1/${prefix}`, `/api/${prefix}`]) {
