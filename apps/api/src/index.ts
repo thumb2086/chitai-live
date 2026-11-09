@@ -758,7 +758,7 @@ app.get('/.well-known/services.json', (c) => {
 
 app.get('/.well-known/services/health', async (c) => {
   const services: { name: string; url: string | null }[] = [
-    { name: 'groq-router', url: 'https://groq.zixilive.dpdns.org/health' },
+    { name: 'groq-router', url: 'https://groq-router-api.bold-waterfall-5f4d.workers.dev/health' },
     { name: 'chitai-live-api', url: null },
   ];
   const results = await Promise.allSettled(services.map(async (svc) => {
@@ -812,6 +812,7 @@ const stubModules: Record<string, any> = {
   'zixi/proxy': null,  // special-cased below
   chat: { messages: [] },
   subtitles: { items: [], total: 0 },
+  stats: { sessions: [], total: 0 },
   seed: { ok: true, userId: '1' },
 };
 for (const prefix of Object.keys(stubModules)) {
