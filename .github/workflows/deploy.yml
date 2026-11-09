@@ -1,4 +1,4 @@
-name: Deploy chitai-live to Cloudflare Workers
+name: Deploy chitai-live to Cloudflare
 
 on:
   push:
@@ -7,107 +7,83 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 env:
   NODE_VERSION: '20'
-  PNPM_VERSION: '10.33.0'
 
 jobs:
   build-and-deploy:
-    name: Build & Deploy
+    name: Build & Deploy Pages
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
     steps:
-      # --- Checkout ---
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # needed for version detection if any
 
-      # --- Setup pnpm ---
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      # --- Setup Node.js ---
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
-      # --- Install dependencies ---
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: .
+        run: npm ci
 
-      # --- Build Next.js ---
-      - name: Build Next.js
-        run: pnpm run build
-        working-directory: .
+      - name: Build Next.js (static export)
+        run: npm run build
         env:
           NODE_ENV: production
 
-      # --- Build OpenNext for Cloudflare ---
-      - name: Build OpenNext (Cloudflare)
-        run: npx opennextjs-cloudflare build
-        working-directory: .
+      - name: Deploy to Cloudflare Pages
+        run: npx wrangler pages deploy out --project-name=livestream-dashboard --branch=main
         env:
-          NODE_ENV: production
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
-      # --- Deploy to Cloudflare Workers ---
-      - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CF_API_TOKEN }}
-          accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          command: deploy
-          workingDirectory: .
-        env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-
-      # --- Notify on failure (optional) ---
-      - name: Notify failure
-        if: failure()
-        run: |
-          echo "Deployment failed. Check GitHub Actions logs."
-          exit 1
-
-  # Optional: Run tests before deploy
-  test:
-    name: Type Check & Lint
+  deploy-api:
+    name: Deploy API Worker
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: Install API deps
+        run: npm ci
+        working-directory: apps/api
+
+      - name: Deploy chitai-live-api
+        run: npx wrangler deploy --config apps/api/wrangler.toml
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
+  typecheck:
+    name: Type Check (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Type Check
-        run: pnpm run lint 2>&1 || true
-        continue-on-error: true
+        run: npm ci
 
       - name: TypeScript Check
-        run: npx tsc --noEmit 2>&1 | head -50
+        run: npx tsc --noEmit 2>&1 | head -20
         continue-on-error: true
