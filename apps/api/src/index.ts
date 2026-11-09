@@ -427,6 +427,7 @@ app.route('/api/v1/auth', auth);
 
 // ========== 受保護路由中介軟體 ==========
 const authMiddleware = async (c: any, next: any) => {
+  if (c.req.path.includes('/by-username/')) return await next();
   const user = await getUserFromToken(c.req.header('Authorization'), c.env);
   if (!user) {
     return c.json({ success: false, error: 'Unauthorized' }, 401);
@@ -436,10 +437,23 @@ const authMiddleware = async (c: any, next: any) => {
 };
 
 // ========== 用戶資料路由 ==========
-const user = new Hono<{ Bindings: Env }>();
-user.use('*', authMiddleware);
 
-// Get current user profile (frontend api.getUser + RequireAuth)
+// Public profile lookup (no auth) — mounted at /api/v1/user/by-username/*
+app.get('/api/v1/user/by-username/:username', async (c) => {
+  const username = c.req.param('username');
+  if (!username) return c.json({ success: false, error: 'Missing username' }, 400);
+  const row = await c.env.DB.prepare(
+    'SELECT id, email, name, username, avatar, role, credits FROM users WHERE username = ?'
+  ).bind(username).first();
+  if (!row) return c.json({ success: false, error: 'User not found' }, 404);
+  const connections = await c.env.DB.prepare(
+    'SELECT platform, channel_id, channel_name, channel_avatar, connected FROM platform_connections WHERE user_id = ?'
+  ).bind((row as any).id).all();
+  return c.json({ success: true, data: { ...(row as any), connections: connections.results || [] } });
+});
+
+const user = new Hono<{ Bindings: Env }>();
+// Public profile lookup must be registered before auth middleware
 user.get('/', async (c) => {
   const me = c.get('user') as any;
   return c.json({ success: true, data: { id: me.id, email: me.email, name: me.name, role: me.role, credits: me.credits, avatar: me.avatar, created_at: me.created_at } });
