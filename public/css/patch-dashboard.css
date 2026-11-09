@@ -1,0 +1,74 @@
+/* === Chitai dashboard modernization (light theme, safe overrides) === */
+[data-livecore-entry=dashboard] .dashboard-sidebar {
+  background: #fff !important;
+  border-right: 1px solid var(--ic-hairline) !important;
+  color: var(--ic-ink) !important;
+}
+[data-livecore-entry=dashboard] .dashboard-sidebar .sidebar-section-title {
+  color: var(--ic-ink-tertiary, #94a3b8) !important;
+  font-size: 10.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+[data-livecore-entry=dashboard] .dashboard-sidebar .sidebar-link,
+[data-livecore-entry=dashboard] .dashboard-sidebar .sidebar-sub-link {
+  color: var(--ic-ink-muted) !important;
+  border-radius: 10px;
+  min-height: 40px;
+}
+[data-livecore-entry=dashboard] .dashboard-sidebar .sidebar-link:hover,
+[data-livecore-entry=dashboard] .dashboard-sidebar .sidebar-sub-link:hover {
+  background: #f8fafc !important;
+  color: var(--ic-ink) !important;
+}
+[data-livecore-entry=dashboard] .dashboard-sidebar .sidebar-link.is-active,
+[data-livecore-entry=dashboard] .dashboard-sidebar .sidebar-sub-link.is-active {
+  background: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #047857 !important;
+  box-shadow: none !important;
+}
+[data-livecore-entry=dashboard] .dashboard-sidebar .sidebar-link.is-active .sidebar-link-icon,
+[data-livecore-entry=dashboard] .dashboard-sidebar .sidebar-link:hover .sidebar-link-icon {
+  color: #059669 !important;
+}
+[data-livecore-entry=dashboard] .sidebar-section-dot {
+  background: #059669 !important;
+  box-shadow: 0 0 0 3px rgba(5,150,105,.12);
+}
+
+/* hide the double logo (TopNav already renders <img>) */
+[data-livecore-entry=dashboard] .logo-link:before { content: none !important; }
+
+/* quick-start step cards: number badge toggles completion */
+[data-livecore-entry=dashboard] .feature-card.is-complete .member-badge {
+  background: #059669 !important;
+  color: #fff !important;
+  border-color: #059669 !important;
+}
+[data-livecore-entry=dashboard] .feature-card .member-badge-toggle {
+  cursor: pointer;
+}
+[data-livecore-entry=dashboard] .feature-card .member-badge-toggle:hover {
+  box-shadow: 0 0 0 3px rgba(5,150,105,.14);
+}
+
+/* progress bar */
+.progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #059669);
+  transition: width .4s ease;
+}
+
+/* feature cards unify spacing */
+[data-livecore-entry=dashboard] .feature-grid .feature-card {
+  padding: 18px;
+  min-height: 0;
+}

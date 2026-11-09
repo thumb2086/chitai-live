@@ -16,6 +16,7 @@ const CSS_PARTS = [
   "/css/dashboard.05.css?v=20261109",
   "/css/dashboard.06.css?v=20261109",
   "/css/dashboard.07.css?v=20261109",
+  "/css/patch-dashboard.css?v=20261109",
 ];
 
 export const metadata: Metadata = {

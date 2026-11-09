@@ -111,6 +111,7 @@ export default function DashboardPage() {
     : 0;
   const allDone = doneCount === STEPS.length;
   const name = data?.user?.name;
+  const progressPct = Math.round((doneCount / STEPS.length) * 100);
 
   return (
     <>
@@ -122,13 +123,10 @@ export default function DashboardPage() {
             {allDone ? "所有功能都已就緒，可以開始直播了。" : "完成下面的快速開始，就可以開始直播。"}
           </p>
         </div>
-        {allDone ? (
-          <Badge tone="ok">
-            <Check size={13} /> 全部就緒
-          </Badge>
-        ) : (
-          <Badge tone="neutral">進行中 {doneCount}/{STEPS.length}</Badge>
-        )}
+        <div className="progress-track" style={{ minWidth: 220, flex: 1, marginLeft: 24, alignSelf: "center" }}>
+          <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+        </div>
+        <span className="settings-note">{progressPct}%</span>
       </header>
 
       <section className="feature-locked-page">
@@ -143,16 +141,16 @@ export default function DashboardPage() {
             return (
               <div className={`feature-card ${done ? "is-complete" : ""}`} key={step.num}>
                 <div className="section-title-row">
-                  <span className={`member-badge ${done ? "status-ok" : ""}`}>
-                    {done ? <Check size={13} /> : step.num}
-                  </span>
                   <button
                     type="button"
-                    className="ghost-link"
+                    className={`member-badge member-badge-toggle ${done ? "status-ok" : ""}`}
                     onClick={() => toggleStep(idx)}
+                    aria-label="toggle-step"
+                    title={done ? "已完成（點擊取消）" : "點擊標記完成"}
                   >
-                    {done ? "取消完成" : "標記完成"}
+                    {done ? <Check size={13} /> : step.num}
                   </button>
+                  <span className="settings-note">{done ? "已完成" : "點擊編號標記"}</span>
                 </div>
                 <Link href={step.href} className="feature-card-link" prefetch={false}>
                   <strong>{step.title}</strong>
