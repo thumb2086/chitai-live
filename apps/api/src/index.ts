@@ -340,11 +340,11 @@ auth.get('/:provider{youtube|twitch|google|discord}', async (c) => {
   let oauthUrl: string;
   if (provider === 'youtube' || provider === 'google') {
     const scope = provider === 'youtube' ? 'https://www.googleapis.com/auth/youtube.readonly' : 'openid email profile';
-    oauthUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope, access_type: 'offline', prompt: 'consent' }).toString();
+    oauthUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope, access_type: 'offline', prompt: 'consent', state: provider }).toString();
   } else if (provider === 'twitch') {
-    oauthUrl = 'https://id.twitch.tv/oauth2/authorize?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope: 'user:read:email' }).toString();
+    oauthUrl = 'https://id.twitch.tv/oauth2/authorize?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope: 'user:read:email', state: provider }).toString();
   } else {
-    oauthUrl = 'https://discord.com/api/oauth2/authorize?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope: 'identify email' }).toString();
+    oauthUrl = 'https://discord.com/api/oauth2/authorize?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope: 'identify email', state: provider }).toString();
   }
   return c.redirect(oauthUrl, 302);
 });
@@ -352,17 +352,74 @@ auth.get('/:provider{youtube|twitch|google|discord}', async (c) => {
 auth.get('/callback', async (c) => {
   const code = c.req.query('code');
   const error = c.req.query('error');
-  if (error) {
-    return c.json({ success: false, error: `OAuth denied: ${error}` }, 400);
+  const state = c.req.query('state') || '';
+  const provider = state || 'youtube';
+  const env = c.env as any;
+  if (error) return c.json({ success: false, error: `OAuth denied: ${error}` }, 400);
+  if (!code) return c.json({ success: false, error: 'Missing OAuth authorization code.' }, 400);
+
+  const providerKey = provider.toUpperCase();
+  const clientId = env[`${providerKey}_CLIENT_ID`];
+  const clientSecret = env[`${providerKey}_CLIENT_SECRET`];
+  if (!clientId || !clientSecret) return c.json({ success: false, error: `OAuth provider '${provider}' is not configured.` }, 503);
+
+  const redirectUri = 'https://api.zixilive.dpdns.org/api/auth/callback';
+  let email: string | undefined, name: string | undefined, avatar: string | undefined;
+  try {
+    if (provider === 'youtube' || provider === 'google') {
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code, grant_type: 'authorization_code', redirect_uri: redirectUri }).toString(),
+      });
+      const tokenJson = await tokenRes.json() as any;
+      if (!tokenRes.ok || !tokenJson.access_token) throw new Error(tokenJson?.error_description || 'Google token exchange failed');
+      const userRes = await fetch('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Authorization: `Bearer ${tokenJson.access_token}` } });
+      const info = await userRes.json() as any;
+      email = info.email; name = info.name || info.given_name; avatar = info.picture;
+    } else if (provider === 'twitch') {
+      const tokenRes = await fetch('https://id.twitch.tv/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code, grant_type: 'authorization_code', redirect_uri: redirectUri }).toString(),
+      });
+      const tokenJson = await tokenRes.json() as any;
+      if (!tokenRes.ok || !tokenJson.access_token) throw new Error(tokenJson?.message || 'Twitch token exchange failed');
+      const userRes = await fetch('https://api.twitch.tv/helix/users', { headers: { 'Client-Id': clientId, Authorization: `Bearer ${tokenJson.access_token}` } });
+      const userJson = await userRes.json() as any;
+      const u = userJson?.data?.[0] || {};
+      email = u.email; name = u.display_name || u.login; avatar = u.profile_image_url;
+    } else {
+      return c.json({ success: false, error: `Unsupported provider: ${provider}` }, 400);
+    }
+  } catch (e: any) {
+    return c.json({ success: false, error: e?.message || 'OAuth exchange failed' }, 500);
   }
-  if (!code) {
-    return c.json({ success: false, error: 'Missing OAuth authorization code.' }, 400);
+
+  if (!email) return c.json({ success: false, error: 'Provider did not return an email (scope missing?).' }, 502);
+  name = name || email.split('@')[0];
+
+  // Find or create user
+  let user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<User>();
+  if (!user) {
+    const fakeHash = await hashPassword(`oauth:${provider}:${email}`);
+    await c.env.DB.prepare(
+      'INSERT INTO users (email, password_hash, name, role, credits, avatar, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"))'
+    ).bind(email, fakeHash, name, 'user', 0, avatar || null).run();
+    user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<User>();
+  } else if (avatar && !user.avatar) {
+    await c.env.DB.prepare('UPDATE users SET avatar = ?, updated_at = datetime("now") WHERE id = ?').bind(avatar, user.id).run();
+    user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first<User>();
   }
-  return c.json({
-    success: false,
-    error: 'OAuth token exchange not yet implemented. Code received but token refresh wiring pending credentials (YOUTUBE_CLIENT_ID, etc.).',
-    codeReceived: true,
-  }, 501);
+
+  const token = await createJWT(user!, c.env);
+  const refreshToken = crypto.randomUUID();
+  await c.env.KV.put(`refresh:${refreshToken}`, JSON.stringify({ user_id: user!.id }), { expirationTtl: REFRESH_EXPIRY });
+
+  const dest = 'https://www.zixilive.dpdns.org/dashboard?token=' + encodeURIComponent(token);
+  const res = new Response(null, { status: 302, headers: { Location: dest } });
+  res.headers.set('Set-Cookie', `token=${token}; Path=/; Max-Age=604800; Secure; SameSite=Lax`);
+  return res;
 });
 
 app.route('/api/auth', auth);

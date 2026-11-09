@@ -8,6 +8,17 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   const router = useRouter();
 
   useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const qt = q.get("token");
+      if (qt) {
+        localStorage.setItem("chitai_token", qt);
+        document.cookie = `token=${qt}; path=/; max-age=604800`;
+        q.delete("token");
+        const clean = `${window.location.pathname}${q.toString() ? "?" + q.toString() : ""}${window.location.hash}`;
+        window.history.replaceState(null, "", clean);
+      }
+    } catch {}
     const token = localStorage.getItem("chitai_token") || (document.cookie.match(/token=([^;]+)/)?.[1] ?? "");
     fetch("https://api.zixilive.dpdns.org/api/v1/user", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
