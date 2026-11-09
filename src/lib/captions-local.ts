@@ -28,7 +28,7 @@
 
 import type { LiveSegment, LiveState } from "./captions-live";
 
-export const LOCAL_WS_DEFAULT = "ws://localhost:8765/ws";
+export const LOCAL_WS_DEFAULT = "wss://asr.twonline.dpdns.org/ws";
 
 /** Why a probe failed — the two cases need very different user actions. */
 export type LocalFailure =
