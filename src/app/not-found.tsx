@@ -33,7 +33,7 @@ export default function NotFound() {
           href="/dashboard"
           className="primary-button"
           style={{ display: "inline-flex", textDecoration: "none" }}
-        >
+         prefetch={false}>
           回控制中心
         </Link>
       </div>

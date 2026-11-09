@@ -339,7 +339,7 @@ auth.get('/:provider{youtube|twitch|google|discord}', async (c) => {
   const redirectUri = 'https://api.zixilive.dpdns.org/api/auth/callback';
   let oauthUrl: string;
   if (provider === 'youtube' || provider === 'google') {
-    const scope = provider === 'youtube' ? 'https://www.googleapis.com/auth/youtube.readonly' : 'openid email profile';
+    const scope = 'openid email profile https://www.googleapis.com/auth/youtube.readonly';
     oauthUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope, access_type: 'offline', prompt: 'consent', state: provider }).toString();
   } else if (provider === 'twitch') {
     oauthUrl = 'https://id.twitch.tv/oauth2/authorize?' + new URLSearchParams({ client_id: clientId, redirect_uri: redirectUri, response_type: 'code', scope: 'user:read:email', state: provider }).toString();
@@ -785,6 +785,28 @@ app.onError((err, c) => {
     message: c.env.ENVIRONMENT === 'production' ? undefined : err.message,
   }, 500);
 });
+
+// ========== Legacy dashboard module stubs (return empty state, not 404) ==========
+// These keep the static-export dashboard quiet while the real modules are migrated.
+const stubModules: Record<string, any> = {
+  obs: { outputs: [], sources: [] },
+  onboard: { completed: false, steps: [] },
+  giveaways: { items: [], total: 0 },
+  commands: { items: [], total: 0 },
+  donations: { items: [], total: 0, goals: [] },
+  connections: { channels: [], total: 0 },
+  zixi: { wallet: null, transactions: [] },
+  chat: { messages: [] },
+  subtitles: { items: [], total: 0 },
+  seed: { ok: true, userId: '1' },
+};
+for (const prefix of Object.keys(stubModules)) {
+  for (const base of [`/api/v1/${prefix}`, `/api/${prefix}`]) {
+    const handler = (c: any) => c.json({ success: true, data: stubModules[prefix] });
+    app.all(base, handler);
+    app.all(`${base}/*`, handler);
+  }
+}
 
 app.notFound((c) => c.json({ success: false, error: 'Not found' }, 404));
 

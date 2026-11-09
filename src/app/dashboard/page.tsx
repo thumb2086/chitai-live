@@ -154,7 +154,7 @@ export default function DashboardPage() {
                     {done ? "取消完成" : "標記完成"}
                   </button>
                 </div>
-                <Link href={step.href} className="feature-card-link">
+                <Link href={step.href} className="feature-card-link" prefetch={false}>
                   <strong>{step.title}</strong>
                   <span className="row-subtitle">{step.desc}</span>
                   <span className="row-meta">
@@ -178,7 +178,7 @@ export default function DashboardPage() {
             const st = f.status(data);
             const Icon = f.icon;
             return (
-              <Link key={f.href} href={f.href} className="feature-card-link">
+              <Link key={f.href} href={f.href} className="feature-card-link" prefetch={false}>
                 <article className="feature-card">
                   <div className="section-title-row">
                     <span className="member-badge">

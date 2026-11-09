@@ -32,7 +32,7 @@ export function Crumbs({ items }: { items: { label: string; href?: string }[] })
     <nav className="breadcrumb" aria-label="麵包屑">
       {items.map((it, i) =>
         it.href ? (
-          <Link key={i} href={it.href} data-link="">
+          <Link key={i} href={it.href} data-link="" prefetch={false}>
             {it.label}
           </Link>
         ) : (

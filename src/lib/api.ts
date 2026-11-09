@@ -1,10 +1,19 @@
 const BASE = "https://api.zixilive.dpdns.org/api/v1";
 
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  try {
+    const t = localStorage.getItem("chitai_token") || (document.cookie.match(/token=([^;]+)/)?.[1] ?? "");
+    if (t) headers["Authorization"] = `Bearer ${t}`;
+  } catch {}
   const res = await fetch(`${BASE}${url}`, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers: { ...headers, ...(init?.headers as Record<string, string> || {}) },
   });
+  if (res.status === 401) {
+    // Not logged in (or expired): callers treat this as empty state, not a crash.
+    throw Object.assign(new Error("Unauthorized"), { status: 401 });
+  }
   if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`);
   return res.json();
 }

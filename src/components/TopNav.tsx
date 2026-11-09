@@ -13,8 +13,10 @@ export default function TopNav() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    const token = (() => { try { return localStorage.getItem("chitai_token") || (document.cookie.match(/token=([^;]+)/)?.[1] ?? ""); } catch { return ""; } })();
+    if (!token) { setReady(true); return; }
     api.getUser()
-      .then((u) => setUserName(u?.name || ""))
+      .then((u) => setUserName(u?.data?.name || u?.name || ""))
       .catch(() => {})
       .finally(() => setReady(true));
   }, []);
@@ -26,7 +28,7 @@ export default function TopNav() {
 
   return (
     <header className="top-nav">
-      <Link href="/dashboard" data-link="" className="logo-link" aria-label="熾台 CHITAI 控制中心">
+      <Link href="/dashboard" data-link="" className="logo-link" aria-label="熾台 CHITAI 控制中心" prefetch={false}>
         <Image
           src="/logo.svg"
           alt="熾台 CHITAI"
@@ -43,7 +45,7 @@ export default function TopNav() {
           data-link=""
           className={`top-nav-entry${pathname === "/dashboard" ? " is-active" : ""}`}
           aria-current={pathname === "/dashboard" ? "page" : undefined}
-        >
+         prefetch={false}>
           <span>控制中心</span>
         </Link>
       </nav>

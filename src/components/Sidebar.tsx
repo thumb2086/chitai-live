@@ -163,7 +163,7 @@ const [user, setUser] = useState<{
                     data-link=""
                     className={`sidebar-link${active ? " is-active" : ""}`}
                     aria-current={active ? "page" : undefined}
-                  >
+                   prefetch={false}>
                     <span className="sidebar-link-icon" aria-hidden="true">
                       <Icon size={18} strokeWidth={2.15} />
                     </span>
@@ -189,7 +189,7 @@ const [user, setUser] = useState<{
           <p>帳戶</p>
           <nav aria-label="帳戶">
             {MENU_LINKS.map((l) => (
-              <Link key={l.href} href={l.href} data-link="">
+              <Link key={l.href} href={l.href} data-link="" prefetch={false}>
                 {l.label}
               </Link>
             ))}
@@ -243,7 +243,7 @@ const [user, setUser] = useState<{
                   /* 已連線，但餘額查不到 —— 明確說「查不到」而不是顯示 0 */
                   <strong title="OAuth token 沒有餘額查詢權限">
                     <Link href="/dashboard/zixi" data-link=""
-                      style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                      style={{ textDecoration: "underline", textUnderlineOffset: "2px" }} prefetch={false}>
                       已連線 ›
                     </Link>
                   </strong>
@@ -262,14 +262,14 @@ const [user, setUser] = useState<{
                    原因同 public-page 那次：工具類輸給 0-1-1 的 a{color:inherit}）。*/
                 <strong>
                   <Link href="/dashboard/zixi" data-link=""
-                    style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                    style={{ textDecoration: "underline", textUnderlineOffset: "2px" }} prefetch={false}>
                     去連線 ›
                   </Link>
                 </strong>
               ) : (
                 <strong>
                   <Link href="/dashboard/zixi" data-link=""
-                    style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                    style={{ textDecoration: "underline", textUnderlineOffset: "2px" }} prefetch={false}>
                     重試 ›
                   </Link>
                 </strong>
