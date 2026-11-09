@@ -141,14 +141,14 @@ export default function Home() {
 
           <div className="mt-9 flex w-full max-w-[380px] flex-col gap-3">
             <a
-              href="/api/auth/twitch"
+              href="https://api.zixilive.dpdns.org/api/auth/twitch"
               className="flex items-center justify-center gap-3 rounded-[12px] px-6 py-3.5 text-[15px] font-[650] text-white no-underline transition-all hover:brightness-110"
               style={{ background: "#9146ff" }}
             >
               <Gamepad2 size={20} /> 使用 Twitch 帳號開始
             </a>
             <a
-              href="/api/auth/youtube"
+              href="https://api.zixilive.dpdns.org/api/auth/youtube"
               className="flex items-center justify-center gap-3 rounded-[12px] px-6 py-3.5 text-[15px] font-[650] text-[#111] no-underline transition-all hover:brightness-95"
               style={{ background: "#fff" }}
             >
@@ -306,14 +306,14 @@ export default function Home() {
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
           <a
-            href="/api/auth/twitch"
+            href="https://api.zixilive.dpdns.org/api/auth/twitch"
             className="inline-flex items-center gap-2 rounded-[12px] px-7 py-3.5 text-[15px] font-[650] text-white no-underline transition-all hover:brightness-110"
             style={{ background: "#9146ff" }}
           >
             <Gamepad2 size={18} /> Twitch 登入 <ArrowRight size={16} />
           </a>
           <a
-            href="/api/auth/youtube"
+            href="https://api.zixilive.dpdns.org/api/auth/youtube"
             className="inline-flex items-center gap-2 rounded-[12px] px-7 py-3.5 text-[15px] font-[650] text-[#111] no-underline transition-all hover:brightness-95"
             style={{ background: "#fff" }}
           >

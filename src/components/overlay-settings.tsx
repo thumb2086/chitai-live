@@ -34,7 +34,7 @@ export function useOverlayToken(overlayKey: string): OverlayTokenState {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/obs", {
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/obs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ _meta: "ensure", key: overlayKey }),
@@ -150,7 +150,7 @@ export function OverlayOutput({ title = "OBS / Streamlabs 輸出" }: { title?: s
 
   const reissue = async () => {
     if (!source) return;
-    await fetch("/api/v1/obs", {
+    await fetch("https://api.zixilive.dpdns.org/api/v1/obs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ _meta: "reissue", id: source.id }),

@@ -35,7 +35,7 @@ export default function CommercePage() {
   const [err, setErr] = useState<string | null>(null);
 
   const { data, loading, error, reload } = useAsync<{ products: Product[]; orders: Order[] }>(
-    () => fetch("/api/v1/commerce").then((r) => { if (!r.ok) throw new Error("載入失敗"); return r.json(); }),
+    () => fetch("https://api.zixilive.dpdns.org/api/v1/commerce").then((r) => { if (!r.ok) throw new Error("載入失敗"); return r.json(); }),
     []
   );
 
@@ -49,7 +49,7 @@ export default function CommercePage() {
   const call = async (payload: Record<string, unknown>) => {
     setBusy(true); setErr(null);
     try {
-      const res = await fetch("/api/v1/commerce", {
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/commerce", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`操作失敗 (${res.status})`);

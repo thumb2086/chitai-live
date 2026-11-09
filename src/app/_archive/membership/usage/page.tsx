@@ -63,7 +63,7 @@ function fmtQty(metric: string, n: number): string {
 
 export default function UsagePage() {
   const { data, loading, error, reload } = useAsync<Payload>(
-    () => fetch("/api/v1/membership").then((r) => {
+    () => fetch("https://api.zixilive.dpdns.org/api/v1/membership").then((r) => {
       if (!r.ok) throw new Error("載入失敗");
       return r.json();
     }),

@@ -50,7 +50,7 @@ function StatsInner() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/stats");
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/stats");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setData(await res.json());
       setError(null);

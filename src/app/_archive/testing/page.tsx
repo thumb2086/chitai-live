@@ -51,7 +51,7 @@ export default function TestingPage() {
           const newMsg: any = isDonation
             ? { type: "donation", user: "匿名贊助", text: "繼續加油！", amount: Math.floor(Math.random() * 500) + 50 }
             : { type: "chat", user, text, amount: undefined };
-          fetch("/api/v1/chat/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ platform: "twitch", userName: user, message: text }) }).catch(() => {});
+          fetch("https://api.zixilive.dpdns.org/api/v1/chat/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ platform: "twitch", userName: user, message: text }) }).catch(() => {});
           return [...prev.slice(-50), newMsg];
         });
       }, 6000);
@@ -62,7 +62,7 @@ export default function TestingPage() {
   const sendChat = async () => {
     if (!chatInput.trim()) return;
     setMessages(prev => [...prev, { type: "chat", user: "測試者", text: chatInput }]);
-    await fetch("/api/v1/chat/messages", {
+    await fetch("https://api.zixilive.dpdns.org/api/v1/chat/messages", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ platform: "twitch", userName: "測試者", message: chatInput }),
     }).catch(() => {});
@@ -75,7 +75,7 @@ export default function TestingPage() {
     await api.simulateDonation(amount).catch(() => {});
     // Also create a ZixiDonation record so the alerts overlay shows it
     try {
-      const zixiRes = await fetch("/api/v1/zixi-donations", {
+      const zixiRes = await fetch("https://api.zixilive.dpdns.org/api/v1/zixi-donations", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: userData?.username || "creator", donorAddress: "0xTestDonor", amount, token: "ZXC", message: donationInput, isTest: true }),
       });
@@ -120,7 +120,7 @@ export default function TestingPage() {
                 className={`min-h-[32px] rounded-[999px] px-3 text-[12px] font-[500] transition-all ${autoMode ? "border border-transparent bg-green-600 text-white" : "border border-[var(--ic-hairline)] bg-[var(--ic-surface-1)] text-[var(--ic-ink)]"}`}>
                 {autoMode ? "自動模擬中..." : "自動模擬"}
               </button>
-              <button onClick={() => { setMessages([]); fetch("/api/v1/chat/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ platform: "twitch", message: "__clear__", names: [...chatNames, "系統", "測試者", "測試贊助者"] }) }).catch(() => {}); }} className="flex min-h-[32px] items-center gap-1 rounded-[999px] border border-[var(--ic-hairline)] bg-[var(--ic-surface-1)] px-3 text-[12px] font-[500] text-[var(--ic-ink)] hover:border-red-200 hover:text-red-500">
+              <button onClick={() => { setMessages([]); fetch("https://api.zixilive.dpdns.org/api/v1/chat/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ platform: "twitch", message: "__clear__", names: [...chatNames, "系統", "測試者", "測試贊助者"] }) }).catch(() => {}); }} className="flex min-h-[32px] items-center gap-1 rounded-[999px] border border-[var(--ic-hairline)] bg-[var(--ic-surface-1)] px-3 text-[12px] font-[500] text-[var(--ic-ink)] hover:border-red-200 hover:text-red-500">
                 <Trash2 className="h-3.5 w-3.5" /> 清空
               </button>
             </div>

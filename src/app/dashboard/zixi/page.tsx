@@ -133,7 +133,7 @@ function ZixiInner() {
                     {zixiAddress && <p className="m-0 mt-1 font-mono text-[12px] text-green-600">{zixiAddress}</p>}
                   </div>
                 </div>
-                <a href="/api/auth/zixi" className="mt-3 flex w-fit items-center gap-2 rounded-[var(--ic-radius-md)] border border-[var(--ic-hairline)] bg-[var(--ic-canvas)] px-4 py-2.5 text-[13px] font-[500] text-[var(--ic-ink-muted)] no-underline hover:bg-[var(--ic-surface-3)]">
+                <a href="https://api.zixilive.dpdns.org/api/auth/zixi" className="mt-3 flex w-fit items-center gap-2 rounded-[var(--ic-radius-md)] border border-[var(--ic-hairline)] bg-[var(--ic-canvas)] px-4 py-2.5 text-[13px] font-[500] text-[var(--ic-ink-muted)] no-underline hover:bg-[var(--ic-surface-3)]">
                   <Unlink className="h-4 w-4" /> 重新連線
                 </a>
               </div>
@@ -155,7 +155,7 @@ function ZixiInner() {
                     的特異度是 0-1-1，贏過 .text-white 的 0-1-0 ——
                     結果深色字疊深色底，按鈕文字完全看不見。
                     .primary-button 特異度 0-2-0，且已經含 color:#ffffff。*/}
-                <a href="/api/auth/zixi" className="primary-button inline-flex items-center gap-2">
+                <a href="https://api.zixilive.dpdns.org/api/auth/zixi" className="primary-button inline-flex items-center gap-2">
                   <LogIn className="h-4 w-4" /> 前往 ZIXI 授權
                 </a>
               </div>

@@ -40,7 +40,7 @@ function ConnectionsInner() {
       const result = await api.toggleConnection(platform, false);
       setState(result);
     } else {
-      window.location.href = `/api/auth/${platform}`;
+      window.location.href = `https://api.zixilive.dpdns.org/api/auth/${platform}`;
     }
   };
 

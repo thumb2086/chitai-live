@@ -53,7 +53,7 @@ export function jsonScript(data: unknown): string {
  * HTML shell for an OBS Browser Source.
  *
  * Overlays are server-rendered once for the initial paint, then keep
- * themselves fresh by polling `/api/v1/overlay-data/<sourceKey>?token=`.
+ * themselves fresh by polling `https://api.zixilive.dpdns.org/api/v1/overlay-data/<sourceKey>?token=`.
  */
 export function overlayShell({
   title,
@@ -94,7 +94,7 @@ ${style}
   var root = document.getElementById("overlay");
   function paint(payload){ try { ${script} } catch (e) { console.error(e); } }
   function pull(){
-    fetch("/api/v1/overlay-data/${esc(sourceKey)}?token=" + encodeURIComponent(${jsonScript(token)}), {
+    fetch("https://api.zixilive.dpdns.org/api/v1/overlay-data/${esc(sourceKey)}?token=" + encodeURIComponent(${jsonScript(token)}), {
       headers: { Accept: "application/json" },
       cache: "no-store"
     })

@@ -10,7 +10,7 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/v1/leaderboard?range=${range}`)
+    fetch(`https://api.zixilive.dpdns.org/api/v1/leaderboard?range=${range}`)
       .then((r) => r.json())
       .then((d) => setRows(d.ranking || []))
       .catch(() => setRows([]))

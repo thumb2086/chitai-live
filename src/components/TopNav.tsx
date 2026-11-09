@@ -20,7 +20,7 @@ export default function TopNav() {
   }, []);
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("https://api.zixilive.dpdns.org/api/auth/logout", { method: "POST" });
     window.location.href = "/";
   };
 

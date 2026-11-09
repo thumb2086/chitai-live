@@ -78,7 +78,7 @@ export default function DashboardPage() {
       api.getConnections().catch(() => ({})),
       api.getDonations().catch(() => null),
       api.getCommands().catch(() => null),
-      fetch("/api/v1/obs").then((r) => r.json()).catch(() => ({ sources: [] })),
+      fetch("https://api.zixilive.dpdns.org/api/v1/obs").then((r) => r.json()).catch(() => ({ sources: [] })),
       api.getGiveaways().catch(() => null),
     ])
       .then(([o, u, c, don, cmd, obs, gw]) => {

@@ -47,7 +47,7 @@ export default function VideoReviewPage() {
 
   const { data, loading, error, reload } = useAsync<{ videos: Video[] }>(
     () =>
-      fetch(`/api/v1/donation-videos${filter ? `?status=${filter}` : ""}`).then((r) => {
+      fetch(`https://api.zixilive.dpdns.org/api/v1/donation-videos${filter ? `?status=${filter}` : ""}`).then((r) => {
         if (!r.ok) throw new Error("載入失敗");
         return r.json();
       }),
@@ -59,7 +59,7 @@ export default function VideoReviewPage() {
   const act = async (id: string, payload: Record<string, unknown>) => {
     setBusy(id);
     try {
-      const res = await fetch("/api/v1/donation-videos", {
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/donation-videos", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, ...payload }),

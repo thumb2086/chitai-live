@@ -107,7 +107,7 @@ const [user, setUser] = useState<{
     //
     //   換成「子熙幣餘額」—— 那是使用者真正會想知道的事，
     //   而且對應到我們實際的計價方式（儲值扣點）。
-    fetch("/api/v1/zixi/proxy", {
+    fetch("https://api.zixilive.dpdns.org/api/v1/zixi/proxy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "wallet-summary" }),
@@ -139,7 +139,7 @@ const [user, setUser] = useState<{
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch("https://api.zixilive.dpdns.org/api/auth/logout", { method: "POST" });
     window.location.href = "/";
   };
 

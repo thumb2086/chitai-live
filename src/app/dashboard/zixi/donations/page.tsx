@@ -9,13 +9,13 @@ export default function ZixiDonationsPage() {
   const [checking, setChecking] = useState(false);
   const [msg, setMsg] = useState("");
 
-  const load = () => fetch("/api/v1/zixi-donations").then(r => r.json()).then(d => setDonations(d.donations || [])).catch(() => {});
+  const load = () => fetch("https://api.zixilive.dpdns.org/api/v1/zixi-donations").then(r => r.json()).then(d => setDonations(d.donations || [])).catch(() => {});
 
   useEffect(() => { load().finally(() => setLoading(false)); }, []);
 
   const checkTx = async () => {
     setChecking(true); setMsg("檢查區塊鏈中...");
-    const r = await fetch("/api/v1/zixi/check-tx", { method: "POST" }).then(r => r.json()).catch(() => null);
+    const r = await fetch("https://api.zixilive.dpdns.org/api/v1/zixi/check-tx", { method: "POST" }).then(r => r.json()).catch(() => null);
     if (r?.found > 0) setMsg(`✅ 發現 ${r.found} 筆新捐款！`);
     else if (r?.checked) setMsg("沒有新交易");
     else setMsg("檢查失敗");

@@ -1,4 +1,4 @@
-const BASE = "/api/v1";
+const BASE = "https://api.zixilive.dpdns.org/api/v1";
 
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {

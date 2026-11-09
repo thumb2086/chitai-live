@@ -144,7 +144,7 @@ function CaptionsInner() {
   useEffect(() => {
     Promise.all([
       api.getSubtitles(),
-      fetch("/api/v1/captions/transcribe").then((r) => r.json()).catch(() => null),
+      fetch("https://api.zixilive.dpdns.org/api/v1/captions/transcribe").then((r) => r.json()).catch(() => null),
     ])
       .then(([s, r]) => {
         setConfig(s);
@@ -169,7 +169,7 @@ function CaptionsInner() {
     if (!t) return;
     setLastText(t);
     try {
-      await fetch("/api/v1/captions/segments", {
+      await fetch("https://api.zixilive.dpdns.org/api/v1/captions/segments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: t, speaker: "實況主", status: "final" }),
@@ -638,7 +638,7 @@ function CaptionsPreview({
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/v1/obs")
+    fetch("https://api.zixilive.dpdns.org/api/v1/obs")
       .then((r) => r.json())
       .then((d) => {
         const s = (d.sources ?? []).find((x: any) => x.key === "captions");

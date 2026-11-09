@@ -33,7 +33,7 @@ export default function DonationAlertsPage() {
     // 404, or a total network failure all looked identical -- and the endpoint
     // writes a real `status: "confirmed"` row, so "fired" has a lasting effect.
     try {
-      const res = await fetch("/api/v1/zixi-donations", {
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/zixi-donations", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: userName, donorAddress: "0xTestDonor", amount: 300, token: "ZXC", message: "測試斗內通知！", isTest: true }),
       });

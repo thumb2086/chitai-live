@@ -32,7 +32,7 @@ const routerKey = () => process.env.GROQ_ROUTER_KEY ?? "";
  * 錄音轉寫專用的代理網址（★ 與 chat/embedding 的 router 分開）。
  *
  * 為什麼要拆開：
- *   groq-router 的 `/api/transcriptions` 已刻意停用 —— STT_LEGACY_ENABLED 不是 "1" 就回
+ *   groq-router 的 `https://api.zixilive.dpdns.org/api/transcriptions` 已刻意停用 —— STT_LEGACY_ENABLED 不是 "1" 就回
  *   410，body 裡還指名 use_instead 指向 stt.twonline.dpdns.org。
  *   而同一個 groq-router 的 /v1/embeddings 與 /v1/chat/completions 還活著
  *   （rag.ts 用它們）。所以不能改 GROQ_ROUTER_URL，只能另開一個。

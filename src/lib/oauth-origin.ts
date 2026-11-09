@@ -16,7 +16,7 @@
  */
 export function oauthOrigin(req: { nextUrl: URL }): string {
   // 結尾斜線去掉，避免變成 `https://x//api/auth/callback`
-  return (process.env.PUBLIC_BASE_URL || req.nextUrl.origin).replace(/\/+$/, "");
+  return "https://api.zixilive.dpdns.org".replace(/\/+$/, "");
 }
 
 /** 完整的 callback 網址。Twitch / Google 註冊的就是這個字串。 */

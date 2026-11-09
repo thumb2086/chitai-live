@@ -356,7 +356,7 @@ export function useFeature<T extends Record<string, unknown>>(featureKey: string
 
   useEffect(() => {
     let alive = true;
-    fetch(`/api/v1/features/${featureKey}`)
+    fetch(`https://api.zixilive.dpdns.org/api/v1/features/${featureKey}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (alive) setValue({ ...defaults, ...(d?.settings ?? {}) });
@@ -378,7 +378,7 @@ export function useFeature<T extends Record<string, unknown>>(featureKey: string
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/features/${featureKey}`, {
+      const res = await fetch(`https://api.zixilive.dpdns.org/api/v1/features/${featureKey}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ settings: value }),

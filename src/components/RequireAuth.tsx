@@ -8,7 +8,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/api/v1/user")
+    fetch("https://api.zixilive.dpdns.org/api/v1/user")
       .then(r => { if (r.ok) setOk(true); else router.replace("/"); })
       .catch(() => router.replace("/"));
   }, []);

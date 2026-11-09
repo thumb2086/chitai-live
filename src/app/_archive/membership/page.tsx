@@ -44,7 +44,7 @@ const INVOICE_STATUS: Record<string, string> = {
 export default function MembershipPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { data, loading, error, reload } = useAsync<Payload>(
-    () => fetch("/api/v1/membership").then((r) => { if (!r.ok) throw new Error("載入失敗"); return r.json(); }),
+    () => fetch("https://api.zixilive.dpdns.org/api/v1/membership").then((r) => { if (!r.ok) throw new Error("載入失敗"); return r.json(); }),
     []
   );
 

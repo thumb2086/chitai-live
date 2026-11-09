@@ -199,7 +199,7 @@ export function createLiveCaptions(opts: LiveCaptionsOptions): LiveCaptions {
         language: isoToWhisper(opts.language),
         model: opts.model ?? "whisper-large-v3-turbo",
       });
-      const res = await fetch(`/api/v1/captions/transcribe?${q}`, {
+      const res = await fetch(`https://api.zixilive.dpdns.org/api/v1/captions/transcribe?${q}`, {
         method: "POST",
         headers: { "Content-Type": "application/octet-stream" },
         body: slice,

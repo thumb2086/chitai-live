@@ -61,7 +61,7 @@ export default function ReplayAnalysisPage() {
   const [err, setErr] = useState<string | null>(null);
 
   const { data, loading, error, reload } = useAsync<{ jobs: Job[] }>(
-    () => fetch("/api/v1/replay-jobs").then((r) => {
+    () => fetch("https://api.zixilive.dpdns.org/api/v1/replay-jobs").then((r) => {
       if (!r.ok) throw new Error("載入失敗");
       return r.json();
     }),
@@ -74,7 +74,7 @@ export default function ReplayAnalysisPage() {
   const call = async (payload: Record<string, unknown>) => {
     setBusy(true); setErr(null);
     try {
-      const res = await fetch("/api/v1/replay-jobs", {
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/replay-jobs", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
       });
       const j = await res.json().catch(() => ({}));

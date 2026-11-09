@@ -32,14 +32,14 @@ export default function AuthModal() {
             </div>
             <p style={{ margin: "0 0 20px", fontSize: "14px", color: "#6b6b6b", lineHeight: 1.6 }}>選擇你想要的登入方式，我們不會未經授權發布任何內容。</p>
             <div style={{ display: "grid", gap: "10px" }}>
-              <a href="/api/auth/twitch" style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 16px", borderRadius: "8px", border: "1px solid #e5e2dd", background: "#fafaf8", color: "#111", textDecoration: "none" }}
+              <a href="https://api.zixilive.dpdns.org/api/auth/twitch" style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 16px", borderRadius: "8px", border: "1px solid #e5e2dd", background: "#fafaf8", color: "#111", textDecoration: "none" }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "#d4d0ca"; e.currentTarget.style.background = "#f4f3f1"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e2dd"; e.currentTarget.style.background = "#fafaf8"; }}>
                 <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: "#9146ff" }}><Gamepad2 size={20} /></div>
                 <div style={{ flex: 1 }}><strong style={{ display: "block", fontSize: "14px", fontWeight: 600 }}>Twitch 帳號</strong><span style={{ fontSize: "12px", color: "#8a8a8a" }}>使用 Twitch 帳號快速登入</span></div>
                 <span style={{ color: "#b0b0b0", fontSize: "18px" }}>→</span>
               </a>
-              <a href="/api/auth/youtube" style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 16px", borderRadius: "8px", border: "1px solid #e5e2dd", background: "#fafaf8", color: "#111", textDecoration: "none" }}
+              <a href="https://api.zixilive.dpdns.org/api/auth/youtube" style={{ display: "flex", alignItems: "center", gap: "14px", padding: "14px 16px", borderRadius: "8px", border: "1px solid #e5e2dd", background: "#fafaf8", color: "#111", textDecoration: "none" }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "#d4d0ca"; e.currentTarget.style.background = "#f4f3f1"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e2dd"; e.currentTarget.style.background = "#fafaf8"; }}>
                 <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", color: "#ff0033" }}><TvMinimalPlay size={20} /></div>

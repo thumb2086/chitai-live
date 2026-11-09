@@ -20,7 +20,7 @@ export default function AccountPage() {
 
   const load = async () => {
     try {
-      const r = await fetch("/api/v1/user");
+      const r = await fetch("https://api.zixilive.dpdns.org/api/v1/user");
       if (!r.ok) throw new Error("無法載入帳戶資料");
       const u = await r.json();
       setUser(u);
@@ -39,7 +39,7 @@ export default function AccountPage() {
   const save = async () => {
     setSaving(true); setMsg(null);
     try {
-      const res = await fetch("/api/v1/user", {
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/user", {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: v.name, username: v.username, avatar: v.avatar, demoMode: v.demoMode, publicPage: v.publicPage }),
       });
@@ -170,7 +170,7 @@ export default function AccountPage() {
               variant="secondary"
               className="mt-[14px] w-full"
               onClick={async () => {
-                await fetch("/api/auth/logout", { method: "POST" });
+                await fetch("https://api.zixilive.dpdns.org/api/auth/logout", { method: "POST" });
                 window.location.href = "/";
               }}
             >

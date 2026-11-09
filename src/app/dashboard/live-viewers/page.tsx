@@ -91,7 +91,7 @@ function LiveViewersInner() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/live-viewers");
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/live-viewers");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setLive(await res.json());
     } catch (e: any) {

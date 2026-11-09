@@ -92,7 +92,7 @@ function FollowerAlertInner() {
 
   const loadSubs = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/eventsub");
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/eventsub");
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         setSubError(body?.error ?? `HTTP ${res.status}`);
@@ -114,7 +114,7 @@ function FollowerAlertInner() {
     setBusy(true);
     setSubError(null);
     try {
-      const res = await fetch("/api/v1/eventsub", {
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/eventsub", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),

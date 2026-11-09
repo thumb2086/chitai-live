@@ -36,7 +36,7 @@ export default function SubscriptionPage() {
   const [err, setErr] = useState<string | null>(null);
 
   const { data, loading, error, reload } = useAsync<Payload>(
-    () => fetch("/api/v1/membership").then((r) => { if (!r.ok) throw new Error("載入失敗"); return r.json(); }),
+    () => fetch("https://api.zixilive.dpdns.org/api/v1/membership").then((r) => { if (!r.ok) throw new Error("載入失敗"); return r.json(); }),
     []
   );
 
@@ -49,7 +49,7 @@ export default function SubscriptionPage() {
   const changePlan = async (planKey: string) => {
     setBusy(true); setErr(null);
     try {
-      const res = await fetch("/api/v1/membership", {
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/membership", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ _meta: "changePlan", planKey, billingMode: mode }),
       });

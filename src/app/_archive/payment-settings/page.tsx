@@ -31,7 +31,7 @@ export default function PaymentSettingsPage() {
   const [msg, setMsg] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
 
   const { data, loading, error, reload } = useAsync<{ settings: Settings | null }>(
-    () => fetch("/api/v1/payment-settings").then((r) => r.json()),
+    () => fetch("https://api.zixilive.dpdns.org/api/v1/payment-settings").then((r) => r.json()),
     []
   );
 
@@ -52,7 +52,7 @@ export default function PaymentSettingsPage() {
       const payload: Record<string, unknown> = { ...s };
       delete payload.hasEcpayKey;
       delete payload.hasOpayKey;
-      const res = await fetch("/api/v1/payment-settings", {
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/payment-settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

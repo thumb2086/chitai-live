@@ -36,7 +36,7 @@ export default function MeetupsPage() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   const { data, loading, error, reload } = useAsync<{ meetups: Meetup[] }>(
-    () => fetch("/api/v1/meetups").then((r) => { if (!r.ok) throw new Error("載入失敗"); return r.json(); }),
+    () => fetch("https://api.zixilive.dpdns.org/api/v1/meetups").then((r) => { if (!r.ok) throw new Error("載入失敗"); return r.json(); }),
     []
   );
 
@@ -47,7 +47,7 @@ export default function MeetupsPage() {
   const call = async (payload: Record<string, unknown>) => {
     setBusy(true); setErr(null);
     try {
-      const res = await fetch("/api/v1/meetups", {
+      const res = await fetch("https://api.zixilive.dpdns.org/api/v1/meetups", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });

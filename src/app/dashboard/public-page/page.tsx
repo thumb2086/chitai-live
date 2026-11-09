@@ -18,7 +18,7 @@ export default function PublicPage() {
   // unreachable stats endpoint means "cannot tell", which must not read as
   // "live" nor as a page-level failure.
   useEffect(() => {
-    fetch("/api/v1/stats")
+    fetch("https://api.zixilive.dpdns.org/api/v1/stats")
       .then((r) => (r.ok ? r.json() : null))
       .then((s) => setLive(s))
       .catch(() => setLive({ connections: [] }));

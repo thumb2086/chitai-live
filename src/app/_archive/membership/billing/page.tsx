@@ -59,7 +59,7 @@ function downloadInvoice(inv: Invoice) {
 
 export default function BillingPage() {
   const { data, loading, error } = useAsync<Payload>(
-    () => fetch("/api/v1/membership").then((r) => {
+    () => fetch("https://api.zixilive.dpdns.org/api/v1/membership").then((r) => {
       if (!r.ok) throw new Error("載入失敗");
       return r.json();
     }),
