@@ -107,9 +107,11 @@ const [user, setUser] = useState<{
     //
     //   換成「子熙幣餘額」—— 那是使用者真正會想知道的事，
     //   而且對應到我們實際的計價方式（儲值扣點）。
+    const token = (() => { try { return localStorage.getItem("chitai_token") || (document.cookie.match(/token=([^;]+)/)?.[1] ?? ""); } catch { return ""; } })();
+    if (!token) { setWallet({ state: "disconnected" }); return; }
     fetch("https://api.zixilive.dpdns.org/api/v1/zixi/proxy", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ action: "wallet-summary" }),
     })
       .then((r) => (r.ok ? r.json() : null))
